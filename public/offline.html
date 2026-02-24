@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline | Paper Petals</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #f472b6;
+            --primary-dark: #db2777;
+            --bg-gradient: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated Background Blobs */
+        .blob {
+            position: absolute;
+            filter: blur(60px);
+            z-index: -1;
+            border-radius: 50%;
+            opacity: 0.6;
+            animation: float 20s infinite alternate ease-in-out;
+        }
+
+        .blob-1 {
+            width: 400px;
+            height: 400px;
+            background: #fbcfe8;
+            top: -100px;
+            left: -100px;
+        }
+
+        .blob-2 {
+            width: 300px;
+            height: 300px;
+            background: #f9a8d4;
+            bottom: -50px;
+            right: -50px;
+            animation-delay: -5s;
+        }
+
+        .blob-3 {
+            width: 250px;
+            height: 250px;
+            background: #f472b6;
+            top: 20%;
+            right: 15%;
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0) rotate(0deg) scale(1);
+            }
+
+            33% {
+                transform: translate(30px, 50px) rotate(10deg) scale(1.1);
+            }
+
+            66% {
+                transform: translate(-20px, 20px) rotate(-10deg) scale(0.9);
+            }
+
+            100% {
+                transform: translate(0, 0) rotate(0deg) scale(1);
+            }
+        }
+
+        /* Glassmorphism Card */
+        .card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 32px;
+            padding: 48px 32px;
+            max-width: 440px;
+            width: 90%;
+            box-shadow: 0 25px 50px -12px rgba(244, 114, 182, 0.15);
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            animation: cardAppear 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes cardAppear {
+            0% {
+                opacity: 0;
+                transform: translateY(40px) scale(0.95);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .brand {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 24px;
+            display: inline-block;
+            letter-spacing: -0.02em;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .pulse {
+            width: 10px;
+            height: 10px;
+            background: #ef4444;
+            border-radius: 50%;
+            box-shadow: 0 0 0 rgba(239, 68, 68, 0.4);
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-main);
+            line-height: 1.2;
+        }
+
+        p {
+            font-size: 1.125rem;
+            color: var(--text-muted);
+            margin-bottom: 32px;
+            line-height: 1.6;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px 32px;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 16px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px -5px rgba(244, 114, 182, 0.4);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            background: var(--primary-dark);
+            box-shadow: 0 15px 25px -5px rgba(244, 114, 182, 0.5);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* Decorative Petal Icon */
+        .icon-container {
+            width: 64px;
+            height: 64px;
+            background: #fdf2f8;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            color: var(--primary);
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 480px) {
+            .card {
+                padding: 40px 24px;
+            }
+
+            h1 {
+                font-size: 1.75rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+
+    <div class="card">
+        <div class="icon-container">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20h.01" />
+                <path d="M8.5 16.429a5 5 0 0 1 7 0" />
+                <path d="M6.25 12a9 9 0 0 1 11.5 0" />
+                <path d="M19.078 4.922a14 14 0 0 0-14.156 0" />
+            </svg>
+        </div>
+
+        <span class="brand">PAPER PETALS</span>
+
+        <div class="status-indicator">
+            <div class="pulse"></div>
+            Currently Offline
+        </div>
+
+        <h1>Connection Lost</h1>
+        <p>It seems your connection took a little break. Check your network so we can get back to shopping!</p>
+
+        <a href="/" class="btn">Retry Connection</a>
+    </div>
+
+    <script>
+        // Check connection periodically
+        window.addEventListener('online', () => {
+            window.location.reload();
+        });
+
+        // Add a nice parallax effect on mouse move for desktop
+        if (window.innerWidth > 768) {
+            document.addEventListener('mousemove', (e) => {
+                const moveX = (e.clientX - window.innerWidth / 2) * 0.01;
+                const moveY = (e.clientY - window.innerHeight / 2) * 0.01;
+
+                document.querySelector('.card').style.transform = `translate(${moveX}px, ${moveY}px)`;
+
+                document.querySelector('.blob-1').style.transform = `translate(${-moveX * 2}px, ${-moveY * 2}px)`;
+                document.querySelector('.blob-2').style.transform = `translate(${-moveX * 1.5}px, ${-moveY * 1.5}px)`;
+            });
+        }
+    </script>
+</body>
+
+</html>
