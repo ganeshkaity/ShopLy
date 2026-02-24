@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import imageCompression from 'browser-image-compression';
 import Image from "next/image";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -22,11 +23,15 @@ import { ProductType } from "@/types";
 const EMPTY_PRODUCT: {
     name: string; description: string; price: number; compareAtPrice: number;
     category: string; images: string[]; stock: number; type: ProductType;
-    isActive: boolean; weight: number;
+    isActive: boolean; weight: number; productDetails: string; minOrderQty: number;
+    freeShipping: boolean; returnAvailable: boolean; returnDays: number;
+    codAvailable: boolean; securePayment: boolean;
 } = {
     name: "", description: "", price: 0, compareAtPrice: 0,
     category: "", images: [], stock: 0, type: "PHYSICAL",
-    isActive: true, weight: 0,
+    isActive: true, weight: 0, productDetails: "", minOrderQty: 1,
+    freeShipping: false, returnAvailable: false, returnDays: 7,
+    codAvailable: false, securePayment: true,
 };
 
 export default function AdminProductsPage() {
@@ -46,8 +51,24 @@ export default function AdminProductsPage() {
 
         setUploadingImage(true);
         try {
-            const path = generateFilePath('products', file.name);
-            const url = await uploadFile(PRODUCT_IMAGES_BUCKET, path, file);
+            // Compression options
+            const options = {
+                maxSizeMB: isCover ? 0.05 : 0.07, // 50kb or 70kb
+                maxWidthOrHeight: 1200,
+                useWebWorker: true,
+                initialQuality: 0.8,
+                fileType: 'image/webp' as const
+            };
+
+            const compressedFile = await imageCompression(file, options);
+
+            // Generate a clean filename for WebP
+            const timestamp = Date.now();
+            const originalName = file.name.substring(0, file.name.lastIndexOf('.')) || 'image';
+            const webpName = `${timestamp}_${originalName.replace(/[^a-zA-Z0-9.-]/g, '_')}.webp`;
+
+            // Upload directly to path (generateFilePath already adds folder prefix if needed)
+            const url = await uploadFile(PRODUCT_IMAGES_BUCKET, webpName, compressedFile, 'image/webp');
 
             setFormData(prev => {
                 const newImages = [...prev.images];
@@ -113,6 +134,10 @@ export default function AdminProductsPage() {
             compareAtPrice: product.compareAtPrice || 0, category: product.category,
             images: product.images || [], stock: product.stock, type: product.type,
             isActive: product.isActive, weight: product.weight || 0,
+            productDetails: product.productDetails || "", minOrderQty: product.minOrderQty || 1,
+            freeShipping: !!product.freeShipping, returnAvailable: !!product.returnAvailable,
+            returnDays: product.returnDays || 7, codAvailable: !!product.codAvailable,
+            securePayment: product.securePayment !== undefined ? product.securePayment : true,
         });
         setIsModalOpen(true);
     };
@@ -170,7 +195,7 @@ export default function AdminProductsPage() {
                         <Card key={product.id}>
                             <CardContent className="p-4 flex items-center gap-4">
                                 <div className="relative h-16 w-16 rounded-lg overflow-hidden bg-gray-50 shrink-0">
-                                    {product.images?.[0] ? <Image src={product.images[0]} alt={product.name} fill className="object-cover" /> : <Package className="h-8 w-8 text-muted-foreground/20 m-auto" />}
+                                    {product.images?.[0] ? <Image src={product.images[0]} alt={product.name} fill className="object-cover" unoptimized /> : <Package className="h-8 w-8 text-muted-foreground/20 m-auto" />}
                                 </div>
                                 <div className="flex-grow min-w-0">
                                     <p className="font-medium truncate">{product.name}</p>
@@ -191,19 +216,10 @@ export default function AdminProductsPage() {
                 </div>
             )}
 
-            {/* Create/Edit Modal */}
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingProduct ? "Edit Product" : "New Product"}>
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingProduct ? "Edit Product" : "New Product"} className="max-w-3xl">
                 <div className="space-y-4">
-                    <Input label="Name *" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} />
-                    <div>
-                        <label className="block text-sm font-medium mb-1.5">Description</label>
-                        <textarea className="w-full rounded-lg border border-border bg-white p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 min-h-[80px]" value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <Input label="Price *" type="number" value={formData.price} onChange={(e) => setFormData(prev => ({ ...prev, price: Number(e.target.value) }))} />
-                        <Input label="Compare At Price" type="number" value={formData.compareAtPrice} onChange={(e) => setFormData(prev => ({ ...prev, compareAtPrice: Number(e.target.value) }))} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input label="Name *" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} />
                         <div>
                             <label className="block text-sm font-medium mb-1.5">Category *</label>
                             <select className="w-full rounded-lg border border-border bg-white p-2.5 text-sm outline-none" value={formData.category} onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}>
@@ -211,8 +227,25 @@ export default function AdminProductsPage() {
                                 {PRODUCT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
                         </div>
-                        <Input label="Stock" type="number" value={formData.stock} onChange={(e) => setFormData(prev => ({ ...prev, stock: Number(e.target.value) }))} />
                     </div>
+
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5">Short Description</label>
+                        <textarea className="w-full rounded-lg border border-border bg-white p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 min-h-[60px]" value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} placeholder="Brief summary for product cards..." />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5">Product Details (Markdown Supported)</label>
+                        <textarea className="w-full rounded-lg border border-border bg-white p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 min-h-[120px] font-mono" value={formData.productDetails} onChange={(e) => setFormData(prev => ({ ...prev, productDetails: e.target.value }))} placeholder="**Bold**, *Italic*, - List items, 1. Numbered items..." />
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <Input label="Price *" type="number" value={formData.price} onChange={(e) => setFormData(prev => ({ ...prev, price: Number(e.target.value) }))} />
+                        <Input label="Compare Price" type="number" value={formData.compareAtPrice} onChange={(e) => setFormData(prev => ({ ...prev, compareAtPrice: Number(e.target.value) }))} />
+                        <Input label="Stock" type="number" value={formData.stock} onChange={(e) => setFormData(prev => ({ ...prev, stock: Number(e.target.value) }))} />
+                        <Input label="Min Order Qty" type="number" value={formData.minOrderQty} onChange={(e) => setFormData(prev => ({ ...prev, minOrderQty: Number(e.target.value) }))} />
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium mb-1.5">Type</label>
@@ -221,8 +254,47 @@ export default function AdminProductsPage() {
                                 <option value="DIGITAL">Digital</option>
                             </select>
                         </div>
-                        {/* Empty div to preserve grid layout previously held by Image URL */}
-                        <div></div>
+                        <Input label="Weight (g)" type="number" value={formData.weight} onChange={(e) => setFormData(prev => ({ ...prev, weight: Number(e.target.value) }))} />
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-xl border border-border space-y-4">
+                        <label className="block text-sm font-bold uppercase tracking-wider text-gray-500">Product Features (Max 3 visible)</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <label className="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" checked={formData.freeShipping} onChange={(e) => setFormData(prev => ({ ...prev, freeShipping: e.target.checked }))} />
+                                <span className="text-sm font-medium">Free Shipping</span>
+                            </label>
+
+                            <label className="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" checked={formData.codAvailable} onChange={(e) => setFormData(prev => ({ ...prev, codAvailable: e.target.checked }))} />
+                                <span className="text-sm font-medium">COD Available</span>
+                            </label>
+
+                            <label className="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" checked={formData.securePayment} onChange={(e) => setFormData(prev => ({ ...prev, securePayment: e.target.checked }))} />
+                                <span className="text-sm font-medium">Secure Payment</span>
+                            </label>
+
+                            <div className="space-y-2">
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" checked={formData.returnAvailable} onChange={(e) => setFormData(prev => ({ ...prev, returnAvailable: e.target.checked }))} />
+                                    <span className="text-sm font-medium">Return Available</span>
+                                </label>
+                                {formData.returnAvailable && (
+                                    <div className="ml-7 flex items-center gap-2">
+                                        <select
+                                            className="text-xs rounded border border-border bg-white p-1 outline-none"
+                                            value={formData.returnDays}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, returnDays: Number(e.target.value) }))}
+                                        >
+                                            {[3, 7, 10, 15, 30].map(day => (
+                                                <option key={day} value={day}>{day} Days</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
                     <div className="space-y-4 border-t border-border pt-4">
@@ -230,7 +302,7 @@ export default function AdminProductsPage() {
                             <label className="block text-sm font-medium mb-1.5">Cover Image (Required)</label>
                             {formData.images[0] ? (
                                 <div className="relative h-32 w-32 border border-border rounded-lg overflow-hidden mb-3">
-                                    <Image src={formData.images[0]} alt="Cover" fill className="object-cover" />
+                                    <Image src={formData.images[0]} alt="Cover" fill className="object-cover" unoptimized />
                                     <Button variant="outline" size="icon" className="absolute top-1 right-1 h-6 w-6 bg-white/80 hover:bg-white text-red-500 border-none shadow-sm" onClick={() => removeImage(0)}>
                                         <X className="h-4 w-4" />
                                     </Button>
@@ -256,7 +328,7 @@ export default function AdminProductsPage() {
                             <div className="flex flex-wrap gap-3 mb-3">
                                 {formData.images.slice(1).map((url, i) => url ? (
                                     <div key={i} className="relative h-20 w-20 border border-border rounded-lg overflow-hidden shrink-0">
-                                        <Image src={url} alt={`Image ${i + 1}`} fill className="object-cover" />
+                                        <Image src={url} alt={`Image ${i + 1}`} fill className="object-cover" unoptimized />
                                         <Button variant="outline" size="icon" className="absolute top-1 right-1 h-5 w-5 bg-white/80 hover:bg-white text-red-500 border-none shadow-sm" onClick={() => removeImage(i + 1)}>
                                             <X className="h-3 w-3" />
                                         </Button>

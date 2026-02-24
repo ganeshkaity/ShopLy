@@ -1,9 +1,27 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Mail, Phone, MapPin, Facebook, Instagram, Twitter } from "lucide-react";
+import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, MessageSquare } from "lucide-react";
 import { APP_NAME } from "@/constants";
+import { getSettings, DEFAULT_SETTINGS } from "@/services/settings.service";
+import { AppSettings } from "@/types";
 
 export function Footer() {
     const currentYear = new Date().getFullYear();
+    const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const data = await getSettings();
+                setSettings(data);
+            } catch (error) {
+                console.error("Failed to fetch settings in footer:", error);
+            }
+        };
+        fetchSettings();
+    }, []);
 
     return (
         <footer className="w-full border-t border-border bg-gray-50">
@@ -12,21 +30,27 @@ export function Footer() {
                     {/* Brand */}
                     <div className="flex flex-col gap-4">
                         <Link href="/" className="font-serif text-2xl font-bold text-primary">
-                            {APP_NAME}
+                            {settings.appName}
                         </Link>
                         <p className="text-sm text-muted-foreground leading-relaxed">
                             Premium gift house and stationery store. We bring joy through beautiful handcrafted items and curated stationery.
                         </p>
                         <div className="flex items-center gap-4">
-                            <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                                <Facebook className="h-5 w-5" />
-                            </Link>
-                            <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                                <Instagram className="h-5 w-5" />
-                            </Link>
-                            <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                                <Twitter className="h-5 w-5" />
-                            </Link>
+                            {settings.facebook && (
+                                <Link href={settings.facebook} target="_blank" className="text-muted-foreground hover:text-primary transition-colors">
+                                    <Facebook className="h-5 w-5" />
+                                </Link>
+                            )}
+                            {settings.instagram && (
+                                <Link href={settings.instagram} target="_blank" className="text-muted-foreground hover:text-primary transition-colors">
+                                    <Instagram className="h-5 w-5" />
+                                </Link>
+                            )}
+                            {settings.whatsapp && (
+                                <Link href={`https://wa.me/${settings.whatsapp.replace(/\D/g, '')}`} target="_blank" className="text-muted-foreground hover:text-primary transition-colors">
+                                    <MessageSquare className="h-5 w-5" />
+                                </Link>
+                            )}
                         </div>
                     </div>
 
@@ -54,7 +78,7 @@ export function Footer() {
                             {['Privacy Policy', 'Terms & Conditions', 'Return Policy', 'Shipping Policy', 'Track Order'].map((item) => (
                                 <li key={item}>
                                     <Link
-                                        href={`/${item.toLowerCase().replace(/[ &]/g, '-')}`}
+                                        href={`/${item.toLowerCase().replace(/ & /g, '-').replace(/[ &]/g, '-')}`}
                                         className="text-sm text-muted-foreground hover:text-primary transition-colors"
                                     >
                                         {item}
@@ -71,16 +95,16 @@ export function Footer() {
                             <li className="flex items-start gap-3">
                                 <MapPin className="h-5 w-5 text-primary shrink-0" />
                                 <span className="text-sm text-muted-foreground">
-                                    123 Paper Street, Blossom City,<br />Flower Estate, India - 700001
+                                    {settings.address}
                                 </span>
                             </li>
                             <li className="flex items-center gap-3">
                                 <Phone className="h-5 w-5 text-primary shrink-0" />
-                                <span className="text-sm text-muted-foreground">+91 98765 43210</span>
+                                <span className="text-sm text-muted-foreground">{settings.supportPhone}</span>
                             </li>
                             <li className="flex items-center gap-3">
                                 <Mail className="h-5 w-5 text-primary shrink-0" />
-                                <span className="text-sm text-muted-foreground">hello@paperpetals.com</span>
+                                <span className="text-sm text-muted-foreground">{settings.supportEmail}</span>
                             </li>
                         </ul>
                     </div>

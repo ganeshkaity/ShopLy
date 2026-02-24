@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,6 +13,8 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
 import { INDIAN_STATES } from "@/constants";
 import { ShieldCheck, Truck, CreditCard } from "lucide-react";
+import { getSettings } from "@/services/settings.service";
+import { AppSettings } from "@/types";
 import Link from "next/link";
 
 declare global {
@@ -25,6 +27,7 @@ export default function CheckoutPage() {
     const { toast } = useToast();
     const router = useRouter();
 
+    const [settings, setSettings] = useState<AppSettings | null>(null);
     const items = buyNowItem ? [buyNowItem] : cartItems;
 
     const [isProcessing, setIsProcessing] = useState(false);
@@ -37,6 +40,10 @@ export default function CheckoutPage() {
         state: "",
         pincode: "",
     });
+
+    useEffect(() => {
+        getSettings().then(setSettings).catch(console.error);
+    }, []);
 
     if (!user) {
         return (
@@ -96,7 +103,7 @@ export default function CheckoutPage() {
                 key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
                 amount: razorpayOrder.amount,
                 currency: razorpayOrder.currency,
-                name: "Paper Petals",
+                name: settings?.appName || "ShopLy",
                 description: "Order Payment",
                 order_id: razorpayOrder.id,
                 prefill: { name: address.fullName, email: user.email, contact: address.phone },

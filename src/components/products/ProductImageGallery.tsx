@@ -31,6 +31,7 @@ export function ProductImageGallery({ images, name }: ImageGalleryProps) {
                     className="object-cover object-center"
                     priority
                     sizes="(max-width: 768px) 100vw, 50vw"
+                    unoptimized
                 />
             </div>
 
@@ -45,7 +46,7 @@ export function ProductImageGallery({ images, name }: ImageGalleryProps) {
                                 activeImage === idx ? "border-primary scale-105" : "border-transparent opacity-70 hover:opacity-100"
                             )}
                         >
-                            <Image src={img} alt={`${name} ${idx + 1}`} fill className="object-cover" />
+                            <Image src={img} alt={`${name} ${idx + 1}`} fill className="object-cover" unoptimized />
                         </button>
                     ))}
                 </div>

@@ -64,7 +64,7 @@ export default function CartPage() {
                             <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6 items-center">
                                 <div className="shrink-0 relative h-24 w-24 sm:h-32 sm:w-32 rounded-xl overflow-hidden bg-gray-50 border border-border">
                                     {item.image ? (
-                                        <Image src={item.image} alt={item.name} fill className="object-cover" />
+                                        <Image src={item.image} alt={item.name} fill className="object-cover" unoptimized />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-muted-foreground">No img</div>
                                     )}

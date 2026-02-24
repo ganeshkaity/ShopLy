@@ -42,6 +42,13 @@ export interface Product {
     stock: number;
     weight?: number;
     digitalFileUrl?: string;
+    productDetails?: string;
+    minOrderQty?: number;
+    freeShipping?: boolean;
+    returnAvailable?: boolean;
+    returnDays?: number;
+    codAvailable?: boolean;
+    securePayment?: boolean;
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
@@ -171,4 +178,22 @@ export interface ToastMessage {
     id: string;
     type: 'success' | 'error' | 'info' | 'warning';
     message: string;
+}
+export interface AppSettings {
+    appName: string;
+    supportEmail: string;
+    supportPhone: string;
+    currency: string;
+    currencySymbol: string;
+    freeShippingThreshold: number;
+    whatsapp: string;
+    facebook: string;
+    instagram: string;
+    address: string;
+    heroTitlePrefix: string;
+    heroTitleHighlight1: string;
+    heroTitleHighlight2: string;
+    heroTitleSuffix: string;
+    heroSubtitle: string;
+    updatedAt?: string;
 }

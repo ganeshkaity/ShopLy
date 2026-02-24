@@ -15,13 +15,15 @@ export const DIGITAL_FILES_BUCKET = 'digital-files';
 export async function uploadFile(
     bucket: string,
     filePath: string,
-    file: File
+    file: File | Blob,
+    contentType?: string
 ): Promise<string> {
     const { data, error } = await supabase.storage
         .from(bucket)
         .upload(filePath, file, {
             cacheControl: '3600',
             upsert: true,
+            contentType: contentType
         });
 
     if (error) throw new Error(`Upload failed: ${error.message}`);

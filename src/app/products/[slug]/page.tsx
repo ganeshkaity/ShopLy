@@ -20,7 +20,10 @@ import { ProductImageGallery } from "@/components/products/ProductImageGallery";
 import { ProductRow } from "@/components/products/ProductRow";
 import { useToast } from "@/context/ToastContext";
 import { useCart } from "@/hooks/useCart";
-import { ShoppingCart, Truck, ShieldCheck, RotateCcw } from "lucide-react";
+import { ShoppingCart, Truck, ShieldCheck, RotateCcw, Banknote, PackageCheck } from "lucide-react";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 
 export default function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
     const router = useRouter();
@@ -41,6 +44,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                 const data = await getProductBySlug(slug);
                 if (!data) return notFound();
                 setProduct(data);
+                if (data.minOrderQty && data.minOrderQty > 1) {
+                    setQuantity(data.minOrderQty);
+                }
 
                 // Fetch similar products (same category)
                 const similar = await getProducts({
@@ -185,6 +191,13 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                         )}
                     </div>
 
+                    {/* {product.minOrderQty && product.minOrderQty > 1 && (
+                        <div className="flex items-center gap-2 -mt-4 text-primary bg-primary/5 px-3 py-1.5 rounded-lg w-fit">
+                            <PackageCheck className="h-4 w-4" />
+                            <span className="text-sm font-medium">Minimum Order Quantity: {product.minOrderQty} units</span>
+                        </div>
+                    )} */}
+
                     <p className="text-muted-foreground leading-relaxed">
                         {product.description}
                     </p>
@@ -196,9 +209,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                         <div className="flex items-center gap-4">
                             <div className="flex items-center rounded-full border border-border px-2">
                                 <button
-                                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                    onClick={() => setQuantity(Math.max(product.minOrderQty || 1, quantity - 1))}
                                     className="p-2 hover:text-primary transition-colors disabled:opacity-30"
-                                    disabled={quantity <= 1}
+                                    disabled={quantity <= (product.minOrderQty || 1)}
                                 >
                                     -
                                 </button>
@@ -211,9 +224,16 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                                     +
                                 </button>
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                                {product.stock > 0 ? `${product.stock} items available` : 'Out of stock'}
-                            </p>
+                            <div className="flex flex-col gap-1">
+                                <p className="text-sm text-muted-foreground">
+                                    {product.stock > 0 ? `${product.stock} items available` : 'Out of stock'}
+                                </p>
+                                {product.minOrderQty && product.minOrderQty > 1 && (
+                                    <p className="text-xs font-semibold text-primary">
+                                        Min order quantity: {product.minOrderQty}
+                                    </p>
+                                )}
+                            </div>
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-4">
@@ -246,30 +266,50 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                     </div>
 
                     {/* Value Props */}
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mt-4">
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
-                            <Truck className="h-5 w-5 text-primary shrink-0" />
-                            <span className="text-xs font-medium">Free Shipping above ₹499</span>
-                        </div>
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
-                            <ShieldCheck className="h-5 w-5 text-primary shrink-0" />
-                            <span className="text-xs font-medium">Secure Payment</span>
-                        </div>
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
-                            <RotateCcw className="h-5 w-5 text-primary shrink-0" />
-                            <span className="text-xs font-medium">7 Days Returns</span>
-                        </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4">
+                        {(product.freeShipping || (!product.freeShipping && product.price >= 499)) && (
+                            <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-transparent hover:border-primary/10 transition-colors">
+                                <Truck className="h-5 w-5 text-primary shrink-0" />
+                                <span className="text-xs font-medium">Free Shipping Available</span>
+                            </div>
+                        )}
+                        {product.codAvailable && (
+                            <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-transparent hover:border-primary/10 transition-colors">
+                                <Banknote className="h-5 w-5 text-primary shrink-0" />
+                                <span className="text-xs font-medium">Cash on Delivery</span>
+                            </div>
+                        )}
+                        {product.returnAvailable && (
+                            <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-transparent hover:border-primary/10 transition-colors">
+                                <RotateCcw className="h-5 w-5 text-primary shrink-0" />
+                                <span className="text-xs font-medium">{product.returnDays || 7} Days Returns</span>
+                            </div>
+                        )}
+                        {product.securePayment !== false && (
+                            <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-transparent hover:border-primary/10 transition-colors">
+                                <ShieldCheck className="h-5 w-5 text-primary shrink-0" />
+                                <span className="text-xs font-medium">Secure Payment</span>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Additional Info Tabs (Simplified) */}
+                    {/* Detailed Info */}
                     <div className="mt-8">
-                        <h4 className="font-bold mb-3">Product Details</h4>
-                        <ul className="list-disc list-inside text-sm text-muted-foreground space-y-2">
-                            <li>Material: {product.type === 'DIGITAL' ? 'Digital Download' : 'Premium Artisanal Paper'}</li>
-                            <li>Sustainable and eco-friendly packaging</li>
-                            <li>Handcrafted with attention to detail</li>
-                            {product.type === 'DIGITAL' && <li>Instant access after payment</li>}
-                        </ul>
+                        <h4 className="font-serif text-lg font-bold mb-4">Product Details</h4>
+                        <div className="prose prose-sm max-w-none text-muted-foreground prose-headings:font-serif prose-headings:text-foreground prose-strong:text-foreground prose-li:marker:text-primary whitespace-pre-line">
+                            {product.productDetails ? (
+                                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                                    {product.productDetails}
+                                </ReactMarkdown>
+                            ) : (
+                                <ul className="list-disc list-inside space-y-2">
+                                    <li>Material: {product.type === 'DIGITAL' ? 'Digital Download' : 'Premium Artisanal Paper'}</li>
+                                    <li>Sustainable and eco-friendly packaging</li>
+                                    <li>Handcrafted with attention to detail</li>
+                                    {product.type === 'DIGITAL' && <li>Instant access after payment</li>}
+                                </ul>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
