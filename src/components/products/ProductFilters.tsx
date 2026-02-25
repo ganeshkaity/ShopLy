@@ -1,9 +1,12 @@
 "use client";
 
-import { PRODUCT_CATEGORIES } from "@/constants";
+import { useState, useEffect } from "react";
+import { getCategories } from "@/services/category.service";
+import { Category } from "@/types";
 import { cn } from "@/lib/utils";
-import { Search, X, Filter } from "lucide-react";
+import { Search, X, Filter, Loader2 } from "lucide-react";
 import { Button } from "../ui/Button";
+import { Skeleton } from "../ui/Skeleton";
 
 interface ProductFiltersProps {
     activeCategory: string;
@@ -24,6 +27,22 @@ export function ProductFilters({
     onSortChange,
     className
 }: ProductFiltersProps) {
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function loadCategories() {
+            try {
+                const data = await getCategories(true);
+                setCategories(data);
+            } catch (error) {
+                console.error("Failed to load categories:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        loadCategories();
+    }, []);
     return (
         <div className={cn("flex flex-col gap-6", className)}>
             {/* Search Bar */}
@@ -76,18 +95,24 @@ export function ProductFilters({
                     >
                         All Collections
                     </button>
-                    {PRODUCT_CATEGORIES.map((cat) => (
-                        <button
-                            key={cat}
-                            onClick={() => onCategoryChange(cat)}
-                            className={cn(
-                                "text-left text-sm py-1.5 px-3 rounded-md transition-colors",
-                                activeCategory === cat ? "bg-primary text-white font-medium" : "text-foreground hover:bg-accent"
-                            )}
-                        >
-                            {cat}
-                        </button>
-                    ))}
+                    {loading ? (
+                        Array.from({ length: 5 }).map((_, i) => (
+                            <Skeleton key={i} className="h-8 w-full rounded-md" />
+                        ))
+                    ) : (
+                        categories.map((cat) => (
+                            <button
+                                key={cat.id}
+                                onClick={() => onCategoryChange(cat.name)}
+                                className={cn(
+                                    "text-left text-sm py-1.5 px-3 rounded-md transition-colors",
+                                    activeCategory === cat.name ? "bg-primary text-white font-medium" : "text-foreground hover:bg-accent"
+                                )}
+                            >
+                                {cat.name}
+                            </button>
+                        ))
+                    )}
                 </div>
             </div>
         </div>

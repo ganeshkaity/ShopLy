@@ -15,7 +15,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { useToast } from "@/context/ToastContext";
-import { PRODUCT_CATEGORIES } from "@/constants";
+import { getCategories } from "@/services/category.service";
+import { Category } from "@/types";
 import { Plus, Pencil, Trash2, Search, Package, X, Upload } from "lucide-react";
 import { uploadFile, generateFilePath, PRODUCT_IMAGES_BUCKET } from "@/lib/supabase";
 import { ProductType } from "@/types";
@@ -43,6 +44,7 @@ export default function AdminProductsPage() {
     const [saving, setSaving] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [categories, setCategories] = useState<Category[]>([]);
     const { toast } = useToast();
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isCover: boolean) => {
@@ -106,20 +108,31 @@ export default function AdminProductsPage() {
         });
     };
 
-    const fetchProducts = async () => {
+    const fetchInitialData = async () => {
+        setLoading(true);
         try {
-            const snap = await getDocs(collection(db, "products"));
-            const data = snap.docs.map(d => ({
+            const [productsSnap, categoriesData] = await Promise.all([
+                getDocs(collection(db, "products")),
+                getCategories()
+            ]);
+
+            const prodData = productsSnap.docs.map(d => ({
                 id: d.id, ...d.data(),
                 createdAt: d.data().createdAt?.toDate?.()?.toISOString() || d.data().createdAt,
                 updatedAt: d.data().updatedAt?.toDate?.()?.toISOString() || d.data().updatedAt,
             })) as Product[];
-            setProducts(data);
-        } catch (error) { console.error(error); }
-        finally { setLoading(false); }
+
+            setProducts(prodData);
+            setCategories(categoriesData);
+        } catch (error) {
+            console.error(error);
+            toast("Failed to load initial data", "error");
+        } finally {
+            setLoading(false);
+        }
     };
 
-    useEffect(() => { fetchProducts(); }, []);
+    useEffect(() => { fetchInitialData(); }, []);
 
     const openCreateModal = () => {
         setEditingProduct(null);
@@ -156,7 +169,14 @@ export default function AdminProductsPage() {
                 toast("Product created!", "success");
             }
             setIsModalOpen(false);
-            await fetchProducts();
+            // Refresh products
+            const snap = await getDocs(collection(db, "products"));
+            const data = snap.docs.map(d => ({
+                id: d.id, ...d.data(),
+                createdAt: d.data().createdAt?.toDate?.()?.toISOString() || d.data().createdAt,
+                updatedAt: d.data().updatedAt?.toDate?.()?.toISOString() || d.data().updatedAt,
+            })) as Product[];
+            setProducts(data);
         } catch (error: any) {
             toast(error.message || "Failed to save product", "error");
         } finally { setSaving(false); }
@@ -224,7 +244,7 @@ export default function AdminProductsPage() {
                             <label className="block text-sm font-medium mb-1.5">Category *</label>
                             <select className="w-full rounded-lg border border-border bg-white p-2.5 text-sm outline-none" value={formData.category} onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}>
                                 <option value="">Select</option>
-                                {PRODUCT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                             </select>
                         </div>
                     </div>

@@ -7,10 +7,10 @@ import { ArrowRight, Star, Heart, ShoppingBag, Loader2, Search } from "lucide-re
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { PRODUCT_CATEGORIES } from "@/constants";
 import { getProducts } from "@/services/product.service";
+import { getCategories } from "@/services/category.service";
 import { getSettings, DEFAULT_SETTINGS } from "@/services/settings.service";
-import { Product, AppSettings } from "@/types";
+import { Product, AppSettings, Category } from "@/types";
 import { ProductCard } from "@/components/products/ProductCard";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -20,6 +20,7 @@ import { PromoPopupComponent } from "@/components/home/PromoPopup";
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -75,12 +76,14 @@ export default function HomePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [prodData, settingsData] = await Promise.all([
+        const [prodData, settingsData, categoriesData] = await Promise.all([
           getProducts({ pageLimit: 20 }),
-          getSettings()
+          getSettings(),
+          getCategories(true) // Get only active categories
         ]);
         setProducts(prodData.products);
         setSettings(settingsData);
+        setCategories(categoriesData);
       } catch (error) {
         console.error("Failed to fetch data:", error);
       } finally {
@@ -181,23 +184,37 @@ export default function HomePage() {
                 } select-none`}
               style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
-              {PRODUCT_CATEGORIES.map((category) => (
+              {categories.map((category) => (
                 <Link
-                  key={category}
-                  href={`/products?category=${category}`}
-                  className="group flex-none w-[160px] md:w-[200px] lg:w-[220px] snap-start"
+                  key={category.id}
+                  href={`/products?category=${category.name}`}
+                  className="group flex-none w-[180px] md:w-[240px] snap-start"
                   onClick={handleLinkClick}
                   draggable={false}
                 >
-                  <Card hover className="h-full border-none bg-accent transition-colors hover:bg-primary/5">
-                    <CardContent className="flex flex-col items-center justify-center p-6 gap-3 min-h-[140px]">
-                      <div className="h-12 w-12 rounded-full bg-white flex items-center justify-center text-primary shadow-sm group-hover:scale-110 transition-transform pointer-events-none">
+                  <Card hover className="h-full border-none overflow-hidden relative aspect-[4/5] md:aspect-[3/4]">
+                    <div className="absolute inset-0">
+                      <img
+                        src={category.backgroundImage}
+                        alt={category.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    </div>
+                    <CardContent className="relative h-full flex flex-col items-center justify-end p-6 gap-3 z-10 text-white">
+                      <div className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-sm group-hover:scale-110 transition-transform pointer-events-none mb-2">
                         <ShoppingBag className="h-6 w-6" />
                       </div>
-                      <span className="text-sm font-medium text-center pointer-events-none">{category}</span>
+                      <span className="text-base font-bold text-center pointer-events-none">{category.name}</span>
                     </CardContent>
                   </Card>
                 </Link>
+              ))}
+
+              {categories.length === 0 && Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex-none w-[180px] md:w-[240px] snap-start">
+                  <Skeleton className="h-[240px] w-full rounded-2xl" />
+                </div>
               ))}
             </div>
           </div>

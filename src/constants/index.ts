@@ -14,23 +14,26 @@ export const ORDER_STATUS_FLOW: OrderStatus[] = [
     'Delivered',
 ];
 
-export const PRODUCT_CATEGORIES = [
-    'Greeting Cards',
-    'Gift Wrapping',
-    'Notebooks & Journals',
-    'Planners & Organizers',
-    'Art Prints',
-    'Stickers & Labels',
-    'Envelopes & Letter Sets',
-    'Bookmarks',
-    'Gift Boxes',
-    'Digital Downloads',
-    'Wedding Stationery',
-    'Party Supplies',
-    'Calligraphy Supplies',
-    'Craft Kits',
-    'Other',
-];
+/**
+ * @deprecated Use getCategories() from category.service instead
+ */
+// export const PRODUCT_CATEGORIES = [
+//     'Greeting Cards',
+//     'Gift Wrapping',
+//     'Notebooks & Journals',
+//     'Planners & Organizers',
+//     'Art Prints',
+//     'Stickers & Labels',
+//     'Envelopes & Letter Sets',
+//     'Bookmarks',
+//     'Gift Boxes',
+//     'Digital Downloads',
+//     'Wedding Stationery',
+//     'Party Supplies',
+//     'Calligraphy Supplies',
+//     'Craft Kits',
+//     'Other',
+// ];
 
 export const INDIAN_STATES = [
     'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',

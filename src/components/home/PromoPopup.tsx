@@ -57,12 +57,16 @@ export function PromoPopupComponent() {
     return (
         <div className={cn(
             "fixed inset-0 z-[100] flex items-center justify-center p-4 transition-all duration-500",
-            isVisible ? "bg-black/40 backdrop-blur-sm opacity-100" : "bg-black/0 backdrop-blur-none opacity-0 pointer-events-none"
+            isVisible ? "opacity-100" : "opacity-0 pointer-events-none",
+            isVisible && popup.type !== 'IN_SCREEN' ? "bg-black/40 backdrop-blur-sm" : "bg-transparent pointer-events-none"
         )}>
             <div className={cn(
-                "relative w-full max-h-[90vh] overflow-y-auto shadow-2xl transition-all duration-700 transform scrollbar-hide",
-                popup.type === 'HTML' ? "max-w-3xl rounded-2xl" : "max-w-lg rounded-3xl",
-                isVisible ? "translate-y-0 scale-100 rotate-0" : "translate-y-20 scale-90 rotate-2"
+                "relative transition-all duration-700 transform scrollbar-hide pointer-events-auto",
+                popup.type === 'HTML' ? "w-full max-w-3xl rounded-2xl max-h-[90vh] overflow-y-auto shadow-2xl" :
+                    popup.type === 'IN_SCREEN' ? "w-full sm:max-w-sm sm:rounded-2xl fixed bottom-0 left-0 sm:bottom-6 sm:right-6 shadow-2xl" :
+                        "w-full max-w-lg rounded-3xl max-h-[90vh] overflow-y-auto shadow-2xl",
+                isVisible ? "translate-y-0 scale-100 rotate-0" :
+                    popup.type === 'IN_SCREEN' ? "translate-y-full" : "translate-y-20 scale-90 rotate-2"
             )}>
                 {/* Close Button */}
                 <button
@@ -104,6 +108,33 @@ export function PromoPopupComponent() {
                                 alt="Promotion"
                                 className="max-w-full max-h-[80vh] object-contain"
                             />
+                        )}
+                    </div>
+                ) : popup.type === 'IN_SCREEN' ? (
+                    <div className="bg-white overflow-hidden shadow-2xl border border-gray-100">
+                        <div className="aspect-video relative group/screen">
+                            {popup.link ? (
+                                <Link href={popup.link} onClick={closePopup}>
+                                    <img src={popup.imageUrl} alt="Promotion" className="w-full h-full object-cover" />
+                                </Link>
+                            ) : (
+                                <img src={popup.imageUrl} alt="Promotion" className="w-full h-full object-cover" />
+                            )}
+                            <div className="absolute top-3 left-3">
+                                <Badge className="bg-primary/90 text-white border-none shadow-sm text-[10px] uppercase font-bold px-2 py-0.5">
+                                    Highlight
+                                </Badge>
+                            </div>
+                        </div>
+                        {popup.title && (
+                            <div className="p-4 bg-white border-t border-gray-50">
+                                <h3 className="text-sm font-bold text-gray-900 line-clamp-1">{popup.title}</h3>
+                                {popup.link && (
+                                    <Link href={popup.link} onClick={closePopup} className="text-xs text-primary font-semibold mt-1 inline-flex items-center gap-1 hover:underline">
+                                        View Details <ArrowRight className="h-3 w-3" />
+                                    </Link>
+                                )}
+                            </div>
                         )}
                     </div>
                 ) : (

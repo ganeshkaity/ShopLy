@@ -11,6 +11,7 @@ import { compressImage } from "@/lib/image-utils";
 import { PromoPopup } from "@/types";
 import { Loader2, Plus, Trash2, Edit2, ImageIcon, Link as LinkIcon, CheckCircle2, MessageSquare, Power, Clock, Code, Layout } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ImageCropper } from "@/components/admin/ImageCropper";
 
 export default function AdminPopupsPage() {
     const { toast } = useToast();
@@ -20,6 +21,9 @@ export default function AdminPopupsPage() {
     const [editingPopup, setEditingPopup] = useState<Partial<PromoPopup> | null>(null);
     const [uploadStatus, setUploadStatus] = useState<{ stage: 'compressing' | 'uploading' | 'done' } | null>(null);
     const [saving, setSaving] = useState(false);
+    const [cropperOpen, setCropperOpen] = useState(false);
+    const [tempImageUrl, setTempImageUrl] = useState<string | null>(null);
+    const [tempFile, setTempFile] = useState<File | null>(null);
 
     useEffect(() => {
         fetchPopups();
@@ -82,11 +86,25 @@ export default function AdminPopupsPage() {
         const file = e.target.files?.[0];
         if (!file) return;
 
+        // If it's IN_SCREEN, we need to crop it first
+        if (editingPopup?.type === 'IN_SCREEN') {
+            const objectUrl = URL.createObjectURL(file);
+            setTempImageUrl(objectUrl);
+            setTempFile(file);
+            setCropperOpen(true);
+            return;
+        }
+
+        await processAndUploadImage(file);
+    };
+
+    const processAndUploadImage = async (file: File) => {
         try {
             setUploadStatus({ stage: 'compressing' });
-            // For IMAGE_ONLY, we might want slightly higher quality or support GIFs
+            // For IMAGE_ONLY or IN_SCREEN, we might want slightly higher quality
+            const isVisualOnly = editingPopup?.type === 'IMAGE_ONLY' || editingPopup?.type === 'IN_SCREEN';
             const compressedBlob = await compressImage(file, {
-                targetSizeKB: editingPopup?.type === 'IMAGE_ONLY' ? 200 : 100
+                targetSizeKB: isVisualOnly ? 200 : 100
             });
             const compressedFile = new File([compressedBlob], `popup-${Date.now()}.webp`, { type: 'image/webp' });
 
@@ -104,6 +122,17 @@ export default function AdminPopupsPage() {
         }
     };
 
+    const handleCropComplete = async (croppedBlob: Blob) => {
+        setCropperOpen(false);
+        const file = new File([croppedBlob], tempFile?.name || "cropped-image.webp", { type: 'image/webp' });
+        await processAndUploadImage(file);
+
+        // Cleanup
+        if (tempImageUrl) URL.revokeObjectURL(tempImageUrl);
+        setTempImageUrl(null);
+        setTempFile(null);
+    };
+
     const handleSave = async () => {
         // Validation based on type
         if (editingPopup?.type === 'DEFAULT') {
@@ -111,9 +140,9 @@ export default function AdminPopupsPage() {
                 toast("Title and Image are required for Default type", "error");
                 return;
             }
-        } else if (editingPopup?.type === 'IMAGE_ONLY') {
+        } else if (editingPopup?.type === 'IMAGE_ONLY' || editingPopup?.type === 'IN_SCREEN') {
             if (!editingPopup.imageUrl) {
-                toast("Image is required for Image Only type", "error");
+                toast("Image is required for this type", "error");
                 return;
             }
         } else if (editingPopup?.type === 'HTML') {
@@ -183,6 +212,7 @@ export default function AdminPopupsPage() {
                                     {[
                                         { id: 'DEFAULT', name: 'Default', icon: Layout, desc: 'Image + Title + Description' },
                                         { id: 'IMAGE_ONLY', name: 'Image/GIF Only', icon: ImageIcon, desc: 'Single featured image' },
+                                        { id: 'IN_SCREEN', name: 'In-Screen', icon: MessageSquare, desc: '16:9 bottom corner popup' },
                                         { id: 'HTML', name: 'Custom HTML', icon: Code, desc: 'Full design control' },
                                     ].map((t) => (
                                         <button
@@ -215,8 +245,14 @@ export default function AdminPopupsPage() {
                                 {/* Left Side: Media Upload or HTML Editor */}
                                 {editingPopup?.type !== 'HTML' ? (
                                     <div className="space-y-4">
-                                        <label className="text-sm font-semibold text-gray-700">Popup Image {editingPopup?.type === 'IMAGE_ONLY' ? '(GIFs supported)' : ''}</label>
-                                        <div className="aspect-square bg-gray-50 rounded-[2.5rem] border-4 border-dashed border-gray-100 overflow-hidden relative group/img flex items-center justify-center ring-offset-4 ring-primary/5 hover:ring-2 transition-all">
+                                        <label className="text-sm font-semibold text-gray-700">
+                                            Popup Image {editingPopup?.type === 'IMAGE_ONLY' ? '(GIFs supported)' : ''}
+                                            {editingPopup?.type === 'IN_SCREEN' ? ' (16:9 ratio will be applied)' : ''}
+                                        </label>
+                                        <div className={cn(
+                                            "bg-gray-50 rounded-[2.5rem] border-4 border-dashed border-gray-100 overflow-hidden relative group/img flex items-center justify-center ring-offset-4 ring-primary/5 hover:ring-2 transition-all",
+                                            editingPopup?.type === 'IN_SCREEN' ? "aspect-video" : "aspect-square"
+                                        )}>
                                             {editingPopup?.imageUrl ? (
                                                 <>
                                                     <img src={editingPopup.imageUrl} alt="Popup Preview" className="w-full h-full object-cover" />
@@ -302,7 +338,7 @@ export default function AdminPopupsPage() {
                                         </>
                                     )}
 
-                                    {editingPopup?.type === 'IMAGE_ONLY' && (
+                                    {(editingPopup?.type === 'IMAGE_ONLY' || editingPopup?.type === 'IN_SCREEN') && (
                                         <Input
                                             label="Redirect Link (Optional)"
                                             placeholder="e.g. /products/sale"
@@ -413,6 +449,19 @@ export default function AdminPopupsPage() {
                         </div>
                     )}
                 </div>
+            )}
+
+            {cropperOpen && tempImageUrl && (
+                <ImageCropper
+                    image={tempImageUrl}
+                    onCropComplete={handleCropComplete}
+                    onCancel={() => {
+                        setCropperOpen(false);
+                        if (tempImageUrl) URL.revokeObjectURL(tempImageUrl);
+                        setTempImageUrl(null);
+                        setTempFile(null);
+                    }}
+                />
             )}
         </div>
     );

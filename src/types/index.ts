@@ -207,7 +207,7 @@ export interface AppSettings {
 
 export interface PromoPopup {
     id: string;
-    type: 'DEFAULT' | 'IMAGE_ONLY' | 'HTML';
+    type: 'DEFAULT' | 'IMAGE_ONLY' | 'HTML' | 'IN_SCREEN';
     title?: string;
     description?: string;
     imageUrl?: string;
@@ -216,6 +216,16 @@ export interface PromoPopup {
     htmlContent?: string;
     isActive: boolean;
     showDelay: number; // in seconds
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface Category {
+    id: string;
+    name: string;
+    slug: string;
+    backgroundImage: string;
+    isActive: boolean;
     createdAt: string;
     updatedAt: string;
 }
