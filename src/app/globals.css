@@ -202,3 +202,39 @@ body {
   animation: voice-wave 1s ease-in-out infinite;
   transform-origin: bottom;
 }
+
+@keyframes truck-move {
+  0% {
+    transform: translateX(-4px);
+  }
+
+  50% {
+    transform: translateX(4px);
+  }
+
+  100% {
+    transform: translateX(-4px);
+  }
+}
+
+.animate-truck-move {
+  animation: truck-move 1.5s infinite ease-in-out;
+}
+
+@keyframes truck-move-vertical {
+  0% {
+    transform: translateY(-4px);
+  }
+
+  50% {
+    transform: translateY(4px);
+  }
+
+  100% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-truck-move-vertical {
+  animation: truck-move-vertical 1.5s infinite ease-in-out;
+}

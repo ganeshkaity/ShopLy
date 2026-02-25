@@ -35,6 +35,7 @@ export async function toggleWishlistService(uid: string, product: Product) {
             name: product.name,
             price: product.price,
             image: product.images?.[0] || '',
+            slug: product.slug,
             addedAt: new Date().toISOString()
         });
     }

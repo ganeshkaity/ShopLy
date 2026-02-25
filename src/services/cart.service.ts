@@ -46,7 +46,7 @@ export async function addToCartService(uid: string, product: Product, quantity: 
     if (existingItemIndex > -1) {
         items[existingItemIndex].quantity += quantity;
     } else {
-        items.push({
+        const newItem = {
             productId: product.id,
             name: product.name,
             price: price !== undefined ? price : product.price,
@@ -57,7 +57,9 @@ export async function addToCartService(uid: string, product: Product, quantity: 
             slug: product.slug,
             compareAtPrice: product.compareAtPrice,
             selectedVariants: selectedVariants
-        });
+        };
+        // Sanitize undefined fields for Firestore
+        items.push(JSON.parse(JSON.stringify(newItem)));
     }
 
     await saveCart(uid, items);

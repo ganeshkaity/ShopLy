@@ -51,13 +51,14 @@ export default function WishlistPage() {
     return (
         <div className="container-custom py-8 md:py-16">
             <h1 className="font-serif text-3xl font-bold mb-8">My Wishlist ({items.length} items)</h1>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                 {items.map((item) => (
-                    <Card key={item.productId} hover className="group">
-                        <div className="relative aspect-square bg-gray-50 overflow-hidden">
-                            <Link href={`/products/${item.productId}`} className="block h-full w-full">
+                    <Card key={item.productId} hover className="group flex flex-col">
+                        <div className="relative aspect-square bg-gray-50 overflow-hidden shrink-0">
+                            {/* Fallback to productId if slug is not stored */}
+                            <Link href={`/products/${(item as any).slug || item.productId}`} className="block h-full w-full">
                                 {item.image ? (
-                                    <Image src={item.image} alt={item.name} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
+                                    <Image src={item.image} alt={item.name} fill className="object-cover transition-transform duration-500 group-hover:scale-110" unoptimized />
                                 ) : (
                                     <div className="flex h-full w-full items-center justify-center text-muted-foreground/20">
                                         <Heart className="h-20 w-20" />
@@ -73,14 +74,14 @@ export default function WishlistPage() {
                                 <Trash2 className="h-4 w-4" />
                             </Button>
                         </div>
-                        <CardContent className="p-4 flex flex-col gap-2">
-                            <Link href={`/products/${item.productId}`} className="font-medium hover:text-primary transition-colors line-clamp-1">
+                        <CardContent className="p-3 flex flex-col flex-grow gap-2">
+                            <Link href={`/products/${(item as any).slug || item.productId}`} className="text-sm font-medium hover:text-primary transition-colors line-clamp-2 leading-snug">
                                 {item.name}
                             </Link>
-                            <div className="flex items-center justify-between">
-                                <p className="text-lg font-bold">{formatCurrency(item.price)}</p>
-                                <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full border border-primary/20 text-primary hover:bg-primary hover:text-white">
-                                    <ShoppingCart className="h-4 w-4" />
+                            <div className="mt-auto flex items-center justify-between pt-2">
+                                <p className="text-base font-bold">{formatCurrency(item.price)}</p>
+                                <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full border border-primary/20 text-primary hover:bg-primary hover:text-white shrink-0">
+                                    <ShoppingCart className="h-3.5 w-3.5" />
                                 </Button>
                             </div>
                         </CardContent>

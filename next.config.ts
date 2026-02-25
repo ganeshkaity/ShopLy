@@ -18,6 +18,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'www.mapsofindia.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'm.media-amazon.com',
+      },
     ],
   },
   // PWA headers and other optimizations will be added here if needed
