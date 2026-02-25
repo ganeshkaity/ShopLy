@@ -49,6 +49,7 @@ export interface Product {
     returnDays?: number;
     codAvailable?: boolean;
     securePayment?: boolean;
+    secondaryTag?: string;
     isActive: boolean;
     createdAt: string;
     updatedAt: string;

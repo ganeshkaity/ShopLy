@@ -1,134 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import imageCompression from 'browser-image-compression';
 import Image from "next/image";
+import Link from "next/link";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Product } from "@/types";
-import { createProduct, updateProduct, deleteProduct } from "@/services/product.service";
-import { formatCurrency, cn } from "@/lib/utils";
+import { deleteProduct } from "@/services/product.service";
+import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { useToast } from "@/context/ToastContext";
 import { getCategories } from "@/services/category.service";
 import { Category } from "@/types";
-import { Plus, Pencil, Trash2, Search, Package, X, Upload } from "lucide-react";
-import { uploadFile, generateFilePath, PRODUCT_IMAGES_BUCKET } from "@/lib/supabase";
-import { ProductType } from "@/types";
-
-const EMPTY_PRODUCT: {
-    name: string; description: string; price: number; compareAtPrice: number;
-    category: string; images: string[]; stock: number; type: ProductType;
-    isActive: boolean; weight: number; productDetails: string; minOrderQty: number;
-    freeShipping: boolean; returnAvailable: boolean; returnDays: number;
-    codAvailable: boolean; securePayment: boolean;
-} = {
-    name: "", description: "", price: 0, compareAtPrice: 0,
-    category: "", images: [], stock: 0, type: "PHYSICAL",
-    isActive: true, weight: 0, productDetails: "", minOrderQty: 1,
-    freeShipping: false, returnAvailable: false, returnDays: 7,
-    codAvailable: false, securePayment: true,
-};
+import { Plus, Pencil, Trash2, Search, Package } from "lucide-react";
 
 export default function AdminProductsPage() {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
-    const [formData, setFormData] = useState(EMPTY_PRODUCT);
-    const [saving, setSaving] = useState(false);
-    const [uploadingImage, setUploadingImage] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [categories, setCategories] = useState<Category[]>([]);
-    const [imageInputMode, setImageInputMode] = useState<Record<string, 'upload' | 'link'>>({ cover: 'upload', additional: 'upload' });
-    const [tempUrl, setTempUrl] = useState({ cover: '', additional: '' });
     const { toast } = useToast();
-
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isCover: boolean) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        setUploadingImage(true);
-        try {
-            // Compression options
-            const options = {
-                maxSizeMB: isCover ? 0.05 : 0.07, // 50kb or 70kb
-                maxWidthOrHeight: 1200,
-                useWebWorker: true,
-                initialQuality: 0.8,
-                fileType: 'image/webp' as const
-            };
-
-            const compressedFile = await imageCompression(file, options);
-
-            // Generate a clean filename for WebP
-            const timestamp = Date.now();
-            const originalName = file.name.substring(0, file.name.lastIndexOf('.')) || 'image';
-            const webpName = `${timestamp}_${originalName.replace(/[^a-zA-Z0-9.-]/g, '_')}.webp`;
-
-            // Upload directly to path (generateFilePath already adds folder prefix if needed)
-            const url = await uploadFile(PRODUCT_IMAGES_BUCKET, webpName, compressedFile, 'image/webp');
-
-            setFormData(prev => {
-                const newImages = [...prev.images];
-                if (isCover) {
-                    if (newImages.length === 0) newImages.push(url);
-                    else newImages[0] = url;
-                } else {
-                    if (newImages.length === 0) newImages.push(""); // ensure cover slot exists
-                    newImages.push(url);
-                }
-                return { ...prev, images: newImages };
-            });
-            toast("Image uploaded successfully", "success");
-        } catch (error: any) {
-            toast(error.message || "Failed to upload image", "error");
-        } finally {
-            setUploadingImage(false);
-            e.target.value = ""; // clear input
-        }
-    };
-
-    const handleAddImageUrl = (isCover: boolean) => {
-        const urlValue = isCover ? tempUrl.cover : tempUrl.additional;
-        if (!urlValue.trim()) return;
-
-        setFormData(prev => {
-            const newImages = [...prev.images];
-            if (isCover) {
-                if (newImages.length === 0) newImages.push(urlValue);
-                else newImages[0] = urlValue;
-            } else {
-                if (newImages.length === 0) newImages.push(""); // ensure cover slot exists
-                newImages.push(urlValue);
-            }
-            return { ...prev, images: newImages };
-        });
-
-        setTempUrl(prev => ({ ...prev, [isCover ? 'cover' : 'additional']: '' }));
-        toast("Image link added", "success");
-    };
-
-    const removeImage = (index: number) => {
-        setFormData(prev => {
-            const newImages = [...prev.images];
-            if (index === 0 && newImages.length > 1) {
-                newImages.shift(); // remove cover, next image becomes cover
-            } else if (index === 0) {
-                newImages[0] = ""; // clear cover but keep array structure if no other images
-            } else {
-                newImages.splice(index, 1);
-            }
-            // cleanup if array is just empty strings
-            if (newImages.length === 1 && !newImages[0]) return { ...prev, images: [] };
-            return { ...prev, images: newImages };
-        });
-    };
 
     const fetchInitialData = async () => {
         setLoading(true);
@@ -156,54 +50,6 @@ export default function AdminProductsPage() {
 
     useEffect(() => { fetchInitialData(); }, []);
 
-    const openCreateModal = () => {
-        setEditingProduct(null);
-        setFormData(EMPTY_PRODUCT);
-        setIsModalOpen(true);
-    };
-
-    const openEditModal = (product: Product) => {
-        setEditingProduct(product);
-        setFormData({
-            name: product.name, description: product.description, price: product.price,
-            compareAtPrice: product.compareAtPrice || 0, category: product.category,
-            images: product.images || [], stock: product.stock, type: product.type,
-            isActive: product.isActive, weight: product.weight || 0,
-            productDetails: product.productDetails || "", minOrderQty: product.minOrderQty || 1,
-            freeShipping: !!product.freeShipping, returnAvailable: !!product.returnAvailable,
-            returnDays: product.returnDays || 7, codAvailable: !!product.codAvailable,
-            securePayment: product.securePayment !== undefined ? product.securePayment : true,
-        });
-        setIsModalOpen(true);
-    };
-
-    const handleSave = async () => {
-        if (!formData.name || !formData.category || !formData.price) {
-            toast("Please fill all required fields", "error"); return;
-        }
-        setSaving(true);
-        try {
-            if (editingProduct?.id) {
-                await updateProduct(editingProduct.id, formData);
-                toast("Product updated!", "success");
-            } else {
-                await createProduct(formData as any);
-                toast("Product created!", "success");
-            }
-            setIsModalOpen(false);
-            // Refresh products
-            const snap = await getDocs(collection(db, "products"));
-            const data = snap.docs.map(d => ({
-                id: d.id, ...d.data(),
-                createdAt: d.data().createdAt?.toDate?.()?.toISOString() || d.data().createdAt,
-                updatedAt: d.data().updatedAt?.toDate?.()?.toISOString() || d.data().updatedAt,
-            })) as Product[];
-            setProducts(data);
-        } catch (error: any) {
-            toast(error.message || "Failed to save product", "error");
-        } finally { setSaving(false); }
-    };
-
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this product?")) return;
         try {
@@ -221,7 +67,9 @@ export default function AdminProductsPage() {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <h1 className="font-serif text-3xl font-bold">Products ({products.length})</h1>
-                <Button onClick={openCreateModal} className="rounded-full"><Plus className="h-4 w-4 mr-2" /> Add Product</Button>
+                <Link href="/admin/products/new">
+                    <Button className="rounded-full"><Plus className="h-4 w-4 mr-2" /> Add Product</Button>
+                </Link>
             </div>
 
             <div className="relative">
@@ -249,7 +97,9 @@ export default function AdminProductsPage() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
-                                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => openEditModal(product)}><Pencil className="h-3 w-3" /></Button>
+                                    <Link href={`/admin/products/edit/${product.id}`}>
+                                        <Button variant="outline" size="icon" className="h-8 w-8"><Pencil className="h-3 w-3" /></Button>
+                                    </Link>
                                     <Button variant="outline" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => handleDelete(product.id)}><Trash2 className="h-3 w-3" /></Button>
                                 </div>
                             </CardContent>
@@ -257,187 +107,6 @@ export default function AdminProductsPage() {
                     ))}
                 </div>
             )}
-
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingProduct ? "Edit Product" : "New Product"} className="max-w-3xl">
-                <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Input label="Name *" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} />
-                        <div>
-                            <label className="block text-sm font-medium mb-1.5">Category *</label>
-                            <select className="w-full rounded-lg border border-border bg-white p-2.5 text-sm outline-none" value={formData.category} onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}>
-                                <option value="">Select</option>
-                                {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium mb-1.5">Short Description</label>
-                        <textarea className="w-full rounded-lg border border-border bg-white p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 min-h-[60px]" value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} placeholder="Brief summary for product cards..." />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium mb-1.5">Product Details (Markdown Supported)</label>
-                        <textarea className="w-full rounded-lg border border-border bg-white p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 min-h-[120px] font-mono" value={formData.productDetails} onChange={(e) => setFormData(prev => ({ ...prev, productDetails: e.target.value }))} placeholder="**Bold**, *Italic*, - List items, 1. Numbered items..." />
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <Input label="Price *" type="number" value={formData.price} onChange={(e) => setFormData(prev => ({ ...prev, price: Number(e.target.value) }))} />
-                        <Input label="Compare Price" type="number" value={formData.compareAtPrice} onChange={(e) => setFormData(prev => ({ ...prev, compareAtPrice: Number(e.target.value) }))} />
-                        <Input label="Stock" type="number" value={formData.stock} onChange={(e) => setFormData(prev => ({ ...prev, stock: Number(e.target.value) }))} />
-                        <Input label="Min Order Qty" type="number" value={formData.minOrderQty} onChange={(e) => setFormData(prev => ({ ...prev, minOrderQty: Number(e.target.value) }))} />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium mb-1.5">Type</label>
-                            <select className="w-full rounded-lg border border-border bg-white p-2.5 text-sm outline-none" value={formData.type} onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}>
-                                <option value="PHYSICAL">Physical</option>
-                                <option value="DIGITAL">Digital</option>
-                            </select>
-                        </div>
-                        <Input label="Weight (g)" type="number" value={formData.weight} onChange={(e) => setFormData(prev => ({ ...prev, weight: Number(e.target.value) }))} />
-                    </div>
-
-                    <div className="bg-gray-50 p-4 rounded-xl border border-border space-y-4">
-                        <label className="block text-sm font-bold uppercase tracking-wider text-gray-500">Product Features (Max 3 visible)</label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <label className="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" checked={formData.freeShipping} onChange={(e) => setFormData(prev => ({ ...prev, freeShipping: e.target.checked }))} />
-                                <span className="text-sm font-medium">Free Shipping</span>
-                            </label>
-
-                            <label className="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" checked={formData.codAvailable} onChange={(e) => setFormData(prev => ({ ...prev, codAvailable: e.target.checked }))} />
-                                <span className="text-sm font-medium">COD Available</span>
-                            </label>
-
-                            <label className="flex items-center gap-3 cursor-pointer">
-                                <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" checked={formData.securePayment} onChange={(e) => setFormData(prev => ({ ...prev, securePayment: e.target.checked }))} />
-                                <span className="text-sm font-medium">Secure Payment</span>
-                            </label>
-
-                            <div className="space-y-2">
-                                <label className="flex items-center gap-3 cursor-pointer">
-                                    <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" checked={formData.returnAvailable} onChange={(e) => setFormData(prev => ({ ...prev, returnAvailable: e.target.checked }))} />
-                                    <span className="text-sm font-medium">Return Available</span>
-                                </label>
-                                {formData.returnAvailable && (
-                                    <div className="ml-7 flex items-center gap-2">
-                                        <select
-                                            className="text-xs rounded border border-border bg-white p-1 outline-none"
-                                            value={formData.returnDays}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, returnDays: Number(e.target.value) }))}
-                                        >
-                                            {[3, 7, 10, 15, 30].map(day => (
-                                                <option key={day} value={day}>{day} Days</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4 border-t border-border pt-4">
-                        <div>
-                            <div className="flex items-center justify-between mb-1.5">
-                                <label className="block text-sm font-medium">Cover Image (Required)</label>
-                                <div className="flex border border-border rounded-lg overflow-hidden text-[10px] font-bold">
-                                    <button onClick={() => setImageInputMode(p => ({ ...p, cover: 'upload' }))} className={cn("px-2 py-1 transition-colors", imageInputMode.cover === 'upload' ? "bg-primary text-white" : "bg-white hover:bg-gray-50")}>UPLOAD</button>
-                                    <button onClick={() => setImageInputMode(p => ({ ...p, cover: 'link' }))} className={cn("px-2 py-1 transition-colors", imageInputMode.cover === 'link' ? "bg-primary text-white" : "bg-white hover:bg-gray-50")}>LINK</button>
-                                </div>
-                            </div>
-                            {formData.images[0] ? (
-                                <div className="relative h-32 w-32 border border-border rounded-lg overflow-hidden mb-3">
-                                    <Image src={formData.images[0]} alt="Cover" fill className="object-cover" unoptimized />
-                                    <Button variant="outline" size="icon" className="absolute top-1 right-1 h-6 w-6 bg-white/80 hover:bg-white text-red-500 border-none shadow-sm" onClick={() => removeImage(0)}>
-                                        <X className="h-4 w-4" />
-                                    </Button>
-                                    <Badge className="absolute bottom-1 left-1 text-[10px] shadow-sm" variant="secondary">Cover</Badge>
-                                </div>
-                            ) : (
-                                <div className="mb-3">
-                                    {imageInputMode.cover === 'upload' ? (
-                                        <>
-                                            <input type="file" id="cover-upload" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, true)} disabled={uploadingImage} />
-                                            <label htmlFor="cover-upload" className="flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-border rounded-xl cursor-pointer hover:bg-accent transition-colors">
-                                                {uploadingImage ? <Spinner size="sm" /> : (
-                                                    <>
-                                                        <Upload className="h-6 w-6 text-muted-foreground mb-2" />
-                                                        <span className="text-xs font-medium text-muted-foreground">Upload Cover</span>
-                                                    </>
-                                                )}
-                                            </label>
-                                        </>
-                                    ) : (
-                                        <div className="flex flex-col gap-2">
-                                            <div className="flex gap-2">
-                                                <input
-                                                    type="url"
-                                                    placeholder="Paste image URL here..."
-                                                    className="flex-grow rounded-lg border border-border bg-white p-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                                                    value={tempUrl.cover}
-                                                    onChange={(e) => setTempUrl(prev => ({ ...prev, cover: e.target.value }))}
-                                                />
-                                                <Button type="button" size="sm" onClick={() => handleAddImageUrl(true)}>Add</Button>
-                                            </div>
-                                            <p className="text-[10px] text-muted-foreground">Provide a direct path to an image (e.g. .jpg, .png)</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        <div>
-                            <div className="flex items-center justify-between mb-1.5">
-                                <label className="block text-sm font-medium">Additional Images</label>
-                                <div className="flex border border-border rounded-lg overflow-hidden text-[10px] font-bold">
-                                    <button onClick={() => setImageInputMode(p => ({ ...p, additional: 'upload' }))} className={cn("px-2 py-1 transition-colors", imageInputMode.additional === 'upload' ? "bg-primary text-white" : "bg-white hover:bg-gray-50")}>UPLOAD</button>
-                                    <button onClick={() => setImageInputMode(p => ({ ...p, additional: 'link' }))} className={cn("px-2 py-1 transition-colors", imageInputMode.additional === 'link' ? "bg-primary text-white" : "bg-white hover:bg-gray-50")}>LINK</button>
-                                </div>
-                            </div>
-                            <div className="flex flex-wrap gap-3 mb-3">
-                                {formData.images.slice(1).map((url, i) => url ? (
-                                    <div key={i} className="relative h-20 w-20 border border-border rounded-lg overflow-hidden shrink-0">
-                                        <Image src={url} alt={`Image ${i + 1}`} fill className="object-cover" unoptimized />
-                                        <Button variant="outline" size="icon" className="absolute top-1 right-1 h-5 w-5 bg-white/80 hover:bg-white text-red-500 border-none shadow-sm" onClick={() => removeImage(i + 1)}>
-                                            <X className="h-3 w-3" />
-                                        </Button>
-                                    </div>
-                                ) : null)}
-
-                                {imageInputMode.additional === 'upload' ? (
-                                    <>
-                                        <input type="file" id="additional-upload" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, false)} disabled={uploadingImage || !formData.images[0]} />
-                                        <label htmlFor="additional-upload" className={`flex flex-col items-center justify-center w-20 h-20 border-2 border-dashed border-border rounded-xl cursor-pointer transition-colors shrink-0 ${!formData.images[0] ? 'opacity-50 cursor-not-allowed' : 'hover:bg-accent'}`}>
-                                            {uploadingImage ? <Spinner size="sm" /> : <Plus className="h-5 w-5 text-muted-foreground" />}
-                                        </label>
-                                    </>
-                                ) : (
-                                    <div className={cn("flex-grow flex gap-2 min-w-[200px]", !formData.images[0] && "opacity-50")}>
-                                        <input
-                                            type="url"
-                                            placeholder="Additional image URL..."
-                                            className="flex-grow rounded-lg border border-border bg-white p-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                                            value={tempUrl.additional}
-                                            onChange={(e) => setTempUrl(prev => ({ ...prev, additional: e.target.value }))}
-                                            disabled={!formData.images[0]}
-                                        />
-                                        <Button type="button" size="sm" onClick={() => handleAddImageUrl(false)} disabled={!formData.images[0]}>Add</Button>
-                                    </div>
-                                )}
-                            </div>
-                            {!formData.images[0] && <p className="text-xs text-muted-foreground">Upload or link a cover image first to add more images.</p>}
-                        </div>
-                    </div>
-
-                    <div className="flex justify-end gap-3 pt-4 border-t border-border">
-                        <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                        <Button onClick={handleSave} isLoading={saving}>{editingProduct ? "Update" : "Create"}</Button>
-                    </div>
-                </div>
-            </Modal>
         </div>
     );
 }
