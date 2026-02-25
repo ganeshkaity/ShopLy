@@ -8,6 +8,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // Supabase storage bucket names
 export const PRODUCT_IMAGES_BUCKET = 'products';
 export const DIGITAL_FILES_BUCKET = 'digital-files';
+export const BANNERS_BUCKET = 'banners';
+export const POPUPS_BUCKET = 'popups';
 
 /**
  * Upload a file to Supabase storage and return the public URL.

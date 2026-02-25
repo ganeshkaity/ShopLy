@@ -179,6 +179,12 @@ export interface ToastMessage {
     type: 'success' | 'error' | 'info' | 'warning';
     message: string;
 }
+export interface HomeBanner {
+    id: string;
+    imageUrl: string;
+    link: string;
+}
+
 export interface AppSettings {
     appName: string;
     supportEmail: string;
@@ -195,5 +201,21 @@ export interface AppSettings {
     heroTitleHighlight2: string;
     heroTitleSuffix: string;
     heroSubtitle: string;
+    banners?: HomeBanner[];
     updatedAt?: string;
+}
+
+export interface PromoPopup {
+    id: string;
+    type: 'DEFAULT' | 'IMAGE_ONLY' | 'HTML';
+    title?: string;
+    description?: string;
+    imageUrl?: string;
+    link?: string;
+    buttonText?: string;
+    htmlContent?: string;
+    isActive: boolean;
+    showDelay: number; // in seconds
+    createdAt: string;
+    updatedAt: string;
 }

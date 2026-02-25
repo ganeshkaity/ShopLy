@@ -15,6 +15,8 @@ import { ProductCard } from "@/components/products/ProductCard";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { PageLoader } from "@/components/ui/PageLoader";
+import { BannerSlider } from "@/components/home/BannerSlider";
+import { PromoPopupComponent } from "@/components/home/PromoPopup";
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -91,7 +93,7 @@ export default function HomePage() {
   return (
     <>
       {/* {loading && <PageLoader />} */}
-      <div className="flex flex-col gap-16 pb-16">
+      <div className="flex flex-col gap-12 pb-12">
         {/* Hero Section */}
         <section className="relative min-h-[85vh] w-full overflow-hidden bg-[#fff1f2] flex items-center pt-0 lg:pt-5">
           {/* Abstract background blobs for depth */}
@@ -175,7 +177,7 @@ export default function HomePage() {
               onMouseLeave={handleMouseLeave}
               onMouseUp={handleMouseUp}
               onMouseMove={handleMouseMove}
-              className={`flex gap-4 overflow-x-auto pb-6 scrollbar-hide snap-x snap-mandatory ${isDragging ? "cursor-grabbing" : "cursor-grab"
+              className={`flex gap-4 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory ${isDragging ? "cursor-grabbing" : "cursor-grab"
                 } select-none`}
               style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
@@ -206,6 +208,9 @@ export default function HomePage() {
           }
         `}} />
         </section>
+
+        {/* Dynamic Banner Slider */}
+        <BannerSlider banners={settings.banners || []} />
 
         {/* Featured Products */}
         <section className="container-custom">
@@ -248,6 +253,7 @@ export default function HomePage() {
         </section>
 
       </div>
+      <PromoPopupComponent />
     </>
   );
 }

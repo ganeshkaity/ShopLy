@@ -5,6 +5,7 @@ import {
     serverTimestamp
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { supabase, BANNERS_BUCKET } from "@/lib/supabase";
 import { AppSettings } from "@/types";
 
 const SETTINGS_COLLECTION = "settings";
@@ -25,7 +26,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     heroTitleHighlight1: "Paper",
     heroTitleHighlight2: "Petals",
     heroTitleSuffix: "for Every Occasion",
-    heroSubtitle: "Discover our curated collection of artisanal stationery, unique gift wraps, and handcrafted greeting cards designed to make every moment memorable."
+    heroSubtitle: "Discover our curated collection of artisanal stationery, unique gift wraps, and handcrafted greeting cards designed to make every moment memorable.",
+    banners: []
 };
 
 /**
@@ -58,4 +60,38 @@ export async function updateSettings(data: Partial<AppSettings>) {
     };
 
     await setDoc(docRef, updateData, { merge: true });
+}
+
+/**
+ * Uploads an image to Supabase Storage and returns the public URL.
+ */
+export async function uploadImage(file: File, path: string): Promise<string> {
+    try {
+        console.log(`Starting Supabase upload to path: ${path}`, file);
+
+        // Ensure path doesn't start with /
+        const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+
+        const { data, error } = await supabase.storage
+            .from(BANNERS_BUCKET)
+            .upload(cleanPath, file, {
+                cacheControl: '3600',
+                upsert: true
+            });
+
+        if (error) {
+            console.error("Supabase upload error:", error);
+            throw new Error(`Upload failed: ${error.message}`);
+        }
+
+        const { data: urlData } = supabase.storage
+            .from(BANNERS_BUCKET)
+            .getPublicUrl(data.path);
+
+        console.log("Supabase upload successful, public URL:", urlData.publicUrl);
+        return urlData.publicUrl;
+    } catch (error: any) {
+        console.error("Detailed upload error:", error);
+        throw new Error(`Upload failed: ${error.message || 'Unknown error'}`);
+    }
 }
