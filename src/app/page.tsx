@@ -176,9 +176,9 @@ export default function HomePage() {
             >
               {loading || categories.length === 0 ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="flex-none w-[180px] md:w-[240px] snap-start">
+                  <div key={i} className="flex-none w-[140px] md:w-[200px] snap-start">
                     <div className="flex flex-col gap-3">
-                      <Skeleton className="aspect-[4/5] md:aspect-[3/4] w-full rounded-[2rem]" />
+                      <Skeleton className="aspect-[4/5] md:aspect-[3/4] w-full rounded-[1.5rem]" />
                       <Skeleton className="h-4 w-2/3 mx-auto" />
                     </div>
                   </div>
@@ -188,11 +188,11 @@ export default function HomePage() {
                   <Link
                     key={category.id}
                     href={`/products?category=${category.name}`}
-                    className="group flex-none w-[180px] md:w-[240px] snap-start"
+                    className="group flex-none w-[140px] md:w-[200px] snap-start"
                     onClick={handleLinkClick}
                     draggable={false}
                   >
-                    <Card hover className="h-full border-none overflow-hidden relative aspect-[4/5] md:aspect-[3/4] rounded-[2rem]">
+                    <Card hover className="h-full border-none overflow-hidden relative aspect-[4/5] md:aspect-[3/4] rounded-[1.5rem]">
                       <div className="absolute inset-0">
                         <img
                           src={category.backgroundImage}
@@ -201,11 +201,11 @@ export default function HomePage() {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                       </div>
-                      <CardContent className="relative h-full flex flex-col items-center justify-end p-6 gap-3 z-10 text-white">
-                        <div className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-sm group-hover:scale-110 transition-transform pointer-events-none mb-2">
-                          <ShoppingBag className="h-6 w-6" />
+                      <CardContent className="relative h-full flex flex-col items-center justify-end p-4 md:p-6 gap-2 md:gap-3 z-10 text-white">
+                        <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-sm group-hover:scale-110 transition-transform pointer-events-none mb-1 md:mb-2">
+                          <ShoppingBag className="h-5 w-5 md:h-6 md:w-6" />
                         </div>
-                        <span className="text-base font-bold text-center pointer-events-none">{category.name}</span>
+                        <span className="text-sm md:text-base font-bold text-center pointer-events-none">{category.name}</span>
                       </CardContent>
                     </Card>
                   </Link>

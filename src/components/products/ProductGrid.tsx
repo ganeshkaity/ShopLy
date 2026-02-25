@@ -43,15 +43,15 @@ export function ProductGrid({ products, loading, className }: ProductGridProps) 
     }
 
     return (
-        <div className={cn("grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4", className)}>
+        <div className={cn("grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5", className)}>
             {products.map((product) => (
                 <ProductCard key={product.id} product={product} />
             ))}
             {loading && (
                 <>
-                    {Array.from({ length: 4 }).map((_, i) => (
-                        <div key={`load-more-${i}`} className="flex flex-col gap-4">
-                            <Skeleton className="aspect-square w-full rounded-2xl md:rounded-3xl" />
+                    {Array.from({ length: 5 }).map((_, i) => (
+                        <div key={`load-more-${i}`} className="flex flex-col gap-3">
+                            <Skeleton className="aspect-square w-full rounded-xl md:rounded-2xl" />
                             <div className="space-y-2">
                                 <Skeleton className="h-3 w-1/4" />
                                 <Skeleton className="h-4 w-3/4" />

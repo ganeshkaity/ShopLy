@@ -80,6 +80,7 @@ export interface CartItem {
     type: ProductType;
     slug?: string;
     stock?: number;
+    compareAtPrice?: number;
     selectedVariants?: Record<string, string>; // { "Size": "M", "Color": "Red" }
 }
 

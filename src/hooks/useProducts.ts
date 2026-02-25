@@ -8,10 +8,12 @@ interface UseProductsProps {
     category?: string;
     sortBy?: 'newest' | 'priceLowToHigh' | 'priceHighToLow' | 'popular';
     searchQuery?: string;
+    minPrice?: number;
+    maxPrice?: number;
     limit?: number;
 }
 
-export function useProducts({ category, sortBy, searchQuery, limit = 12 }: UseProductsProps = {}) {
+export function useProducts({ category, sortBy, searchQuery, minPrice, maxPrice, limit = 12 }: UseProductsProps = {}) {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -25,6 +27,8 @@ export function useProducts({ category, sortBy, searchQuery, limit = 12 }: UsePr
                 category,
                 sortBy,
                 searchQuery,
+                minPrice,
+                maxPrice,
                 pageLimit: limit,
                 lastDoc: isLoadMore ? lastDoc : null,
             });

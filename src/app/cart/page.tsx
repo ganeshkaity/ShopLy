@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
 
 export default function CartPage() {
-    const { items, itemCount, subtotal, shippingCharge, grandTotal, loading, updateQuantity, removeItem } = useCart();
+    const { items, itemCount, subtotal, mrpTotal, discount, shippingCharge, grandTotal, loading, updateQuantity, removeItem } = useCart();
     const { user } = useAuth();
     const router = useRouter();
 
@@ -98,6 +98,18 @@ export default function CartPage() {
                         <CardContent className="p-6 sm:p-8 flex flex-col gap-6">
                             <h3 className="font-serif text-xl font-bold">Order Summary</h3>
                             <div className="space-y-4 text-sm">
+                                {discount > 0 && (
+                                    <>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-muted-foreground">Total MRP</span>
+                                            <span className="font-medium text-muted-foreground">{formatCurrency(mrpTotal)}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-green-600">
+                                            <span>Discount</span>
+                                            <span className="font-medium">-{formatCurrency(discount)}</span>
+                                        </div>
+                                    </>
+                                )}
                                 <div className="flex items-center justify-between">
                                     <span className="text-muted-foreground">Subtotal</span>
                                     <span className="font-medium">{formatCurrency(subtotal)}</span>

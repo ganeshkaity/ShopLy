@@ -55,6 +55,7 @@ export async function addToCartService(uid: string, product: Product, quantity: 
             category: product.category,
             type: product.type,
             slug: product.slug,
+            compareAtPrice: product.compareAtPrice,
             selectedVariants: selectedVariants
         });
     }

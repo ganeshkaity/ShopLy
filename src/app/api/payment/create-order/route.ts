@@ -16,9 +16,11 @@ function getRazorpay() {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
+        console.log("Create Order Body:", body);
         const { amount, currency = "INR", receipt, notes } = body;
 
         if (!amount || amount <= 0) {
+            console.error("Invalid amount received:", amount);
             return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
         }
 

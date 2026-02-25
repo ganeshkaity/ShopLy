@@ -215,9 +215,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
     const isSale = !!product.compareAtPrice && product.compareAtPrice > product.price;
 
     return (
-        <div className="container-custom pt-4 md:pt-6 pb-32 md:pb-16 flex flex-col gap-6">
+        <div className="container-custom pt-4 md:pt-6 pb-24 md:pb-16 flex flex-col gap-6">
             {/* Breadcrumbs */}
-            <nav className="flex items-center gap-2 text-[10px] md:text-sm font-medium text-muted-foreground overflow-x-auto whitespace-nowrap pb-2 scrollbar-none">
+            <nav className="flex items-center gap-2 text-[10px] md:text-sm font-medium text-muted-foreground overflow-x-auto whitespace-nowrap pb-2 scrollbar-hide">
                 <Link href="/" className="flex items-center gap-1.5 hover:text-primary transition-colors">
                     <Home className="h-3.5 w-3.5 mb-0.5" />
                     <span className="sr-only">Home</span>
@@ -236,9 +236,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                 </span>
             </nav>
 
-            <div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)]">
+            <div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
                 {/* Left: Image Gallery */}
-                <div className="lg:sticky lg:top-10 h-fit">
+                <div className="relative lg:sticky lg:top-10 h-fit">
                     <ProductImageGallery images={product.images || []} name={product.name} />
 
                     {/* Floating Buttons */}
@@ -432,6 +432,34 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                         </div>
                     </div>
 
+                    {/* Product Details & Accordions */}
+                    <div className="mt-8 space-y-4">
+                        {/* Default Product Details Accordion */}
+                        <AccordionItem title="Product Description">
+                            {product.productDetails ? (
+                                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                                    {product.productDetails}
+                                </ReactMarkdown>
+                            ) : (
+                                <ul className="list-disc list-inside space-y-2">
+                                    <li>Material: {product.type === 'DIGITAL' ? 'Digital Download' : 'Premium Artisanal Paper'}</li>
+                                    <li>Sustainable and eco-friendly packaging</li>
+                                    <li>Handcrafted with attention to detail</li>
+                                    {product.type === 'DIGITAL' && <li>Instant access after payment</li>}
+                                </ul>
+                            )}
+                        </AccordionItem>
+
+                        {/* Additional Custom Accordions */}
+                        {product.productAccordions?.map((item) => (
+                            <AccordionItem key={item.id} title={item.title}>
+                                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                                    {item.content}
+                                </ReactMarkdown>
+                            </AccordionItem>
+                        ))}
+                    </div>
+
                     {/* Trust Badges */}
                     {(() => {
                         const badges = [
@@ -460,48 +488,23 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                         if (badges.length === 0) return null;
 
                         return (
-                            <div className={`grid grid-cols-${badges.length} gap-2 py-6 border-y border-border/50 mt-4`}>
+                            <div className={`flex items-stretch border-y border-border/40 py-4 mt-8`}>
                                 {badges.map((badge, idx) => (
-                                    <div key={idx} className="flex flex-col items-center text-center gap-3">
-                                        <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-primary/5 flex items-center justify-center text-primary/80">
-                                            <badge.icon className="h-6 w-6 md:h-7 md:w-7" />
+                                    <div key={idx} className="flex-1 flex flex-col items-center text-center gap-2 relative">
+                                        <div className="h-10 w-10 md:h-11 md:w-11 rounded-full bg-primary/5 flex items-center justify-center text-primary/80 shrink-0">
+                                            <badge.icon className="h-5 w-5 md:h-6 md:w-6" />
                                         </div>
-                                        <span className="text-[10px] md:text-sm font-medium leading-tight text-muted-foreground px-1">
+                                        <span className="text-[9px] md:text-[13px] font-medium leading-tight text-muted-foreground px-1 max-w-[120px]">
                                             {badge.label}
                                         </span>
+                                        {idx < badges.length - 1 && (
+                                            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-[1px] bg-border/40" />
+                                        )}
                                     </div>
                                 ))}
                             </div>
                         );
                     })()}
-
-                    {/* Product Details & Accordions */}
-                    <div className="mt-8 space-y-4">
-                        {/* Default Product Details Accordion */}
-                        <AccordionItem title="Product Description">
-                            {product.productDetails ? (
-                                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                                    {product.productDetails}
-                                </ReactMarkdown>
-                            ) : (
-                                <ul className="list-disc list-inside space-y-2">
-                                    <li>Material: {product.type === 'DIGITAL' ? 'Digital Download' : 'Premium Artisanal Paper'}</li>
-                                    <li>Sustainable and eco-friendly packaging</li>
-                                    <li>Handcrafted with attention to detail</li>
-                                    {product.type === 'DIGITAL' && <li>Instant access after payment</li>}
-                                </ul>
-                            )}
-                        </AccordionItem>
-
-                        {/* Additional Custom Accordions */}
-                        {product.productAccordions?.map((item) => (
-                            <AccordionItem key={item.id} title={item.title}>
-                                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                                    {item.content}
-                                </ReactMarkdown>
-                            </AccordionItem>
-                        ))}
-                    </div>
                 </div>
             </div>
 
@@ -554,18 +557,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                 </div>
             </div>
 
-            {/* Recommendations Section */}
-            <div className="mt-20 flex flex-col gap-16">
+            {/* Recommendation Sections */}
+            <div className="mt-16 flex flex-col gap-10">
                 <ProductRow
                     title="Similar Products"
                     products={similarProducts}
-                    viewAllLink={`/products?category=${product.category}`}
                 />
-
                 <ProductRow
                     title="You Might Also Love"
                     products={recommendedProducts}
-                    viewAllLink="/products"
                 />
             </div>
         </div>
