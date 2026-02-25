@@ -154,7 +154,10 @@ export function Header() {
                     </Link>
 
                     {/* Desktop Navigation / Inline Search */}
-                    <div className="hidden md:flex flex-1 items-center justify-center px-8 relative">
+                    <div className={cn(
+                        "hidden md:flex flex-1 items-center justify-center px-8 relative",
+                        isSearchOpen && "flex absolute inset-0 bg-white z-50 px-4 md:relative md:bg-transparent md:inset-auto md:px-8"
+                    )}>
                         {!isSearchOpen ? (
                             <nav className="flex gap-8 overflow-hidden animate-in fade-in slide-in-from-left-4 duration-300">
                                 {NAV_LINKS.map((link) => (
@@ -233,12 +236,12 @@ export function Header() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2 sm:gap-4">
+                    <div className="flex items-center gap-1 sm:gap-4">
                         {!isSearchOpen && (
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="hidden sm:flex animate-in fade-in zoom-in duration-300"
+                                className="flex animate-in fade-in zoom-in duration-300"
                                 onClick={() => setIsSearchOpen(true)}
                             >
                                 <Search className="h-5 w-5" />

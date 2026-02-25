@@ -108,24 +108,6 @@ export default function HomePage() {
               {/* Left Content */}
               <div className="flex flex-col gap-6 order-2 lg:order-1 items-center text-center lg:items-start lg:text-left relative z-20">
 
-                {/* Mobile Search Box */}
-                <form
-                  onSubmit={handleSearch}
-                  className="w-full max-w-sm mb-4 lg:hidden animate-in fade-in slide-in-from-top duration-500 -mt-20"
-                >
-                  <div className="relative group">
-                    <input
-                      type="text"
-                      placeholder="Search for products..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full h-14 pl-12 pr-4 rounded-2xl border-none bg-white/80 backdrop-blur-md shadow-lg shadow-primary/5 outline-none transition-all focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60 text-lg"
-                    />
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary group-focus-within:scale-110 transition-transform" />
-                    <button type="submit" className="sr-only">Search</button>
-                  </div>
-                </form>
-
                 <Badge variant="secondary" className="w-fit animate-in fade-in slide-in-from-bottom duration-500 bg-white/50 border-primary/10 text-primary px-4 py-1">
                   Handcrafted with love
                 </Badge>
@@ -139,12 +121,20 @@ export default function HomePage() {
                     </p>
                   </>
                 )}
-                <div className="flex flex-wrap justify-center lg:justify-start gap-4 mt-4 animate-in fade-in slide-in-from-bottom duration-1000 delay-300">
+                <div className="flex flex-col items-center lg:items-start gap-4 mt-8 animate-in fade-in slide-in-from-bottom duration-1000 delay-300">
                   <Link href="/products">
                     <Button size="lg" className="rounded-full px-8 h-14 text-white shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90">
                       Shop Collection <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </Link>
+
+                  {/* Mobile Scroll Indicator */}
+                  <div className="lg:hidden flex flex-col items-center gap-2 mt-4 animate-bounce-subtle">
+                    <div className="w-6 h-10 rounded-full border-2 border-primary/30 flex justify-center p-1.5">
+                      <div className="w-1 h-2 bg-primary rounded-full animate-scroll-down" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/40">Scroll</span>
+                  </div>
                 </div>
               </div>
 

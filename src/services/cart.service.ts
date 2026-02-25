@@ -33,9 +33,15 @@ export async function saveCart(uid: string, items: CartItem[]) {
 /**
  * Adds an item to the cart or updates quantity if exists.
  */
-export async function addToCartService(uid: string, product: Product, quantity: number) {
+export async function addToCartService(uid: string, product: Product, quantity: number, selectedVariants?: Record<string, string>, price?: number) {
     const items = await getCart(uid);
-    const existingItemIndex = items.findIndex(item => item.productId === product.id);
+
+    // Check for existing item with same productId AND same selected variants
+    const existingItemIndex = items.findIndex(item => {
+        const productMatch = item.productId === product.id;
+        const variantsMatch = JSON.stringify(item.selectedVariants || {}) === JSON.stringify(selectedVariants || {});
+        return productMatch && variantsMatch;
+    });
 
     if (existingItemIndex > -1) {
         items[existingItemIndex].quantity += quantity;
@@ -43,11 +49,13 @@ export async function addToCartService(uid: string, product: Product, quantity: 
         items.push({
             productId: product.id,
             name: product.name,
-            price: product.price,
+            price: price !== undefined ? price : product.price,
             image: product.images?.[0] || '',
             quantity: quantity,
             category: product.category,
-            type: product.type
+            type: product.type,
+            slug: product.slug,
+            selectedVariants: selectedVariants
         });
     }
 

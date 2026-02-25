@@ -19,7 +19,7 @@ interface CartContextType {
     shippingCharge: number;
     grandTotal: number;
     subtotal: number;
-    addItem: (product: Product, quantity: number) => Promise<void>;
+    addItem: (product: Product, quantity: number, selectedVariants?: Record<string, string>, price?: number) => Promise<void>;
     removeItem: (productId: string) => Promise<void>;
     updateQuantity: (productId: string, quantity: number) => Promise<void>;
     clearCart: () => Promise<void>;
@@ -70,9 +70,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     const grandTotal = subtotal + shippingCharge;
 
-    const addItem = async (product: Product, quantity: number) => {
+    const addItem = async (product: Product, quantity: number, selectedVariants?: Record<string, string>, price?: number) => {
         if (!user) return; // Cart requires login for now
-        const newItems = await addToCartService(user.uid, product, quantity);
+        const newItems = await addToCartService(user.uid, product, quantity, selectedVariants, price);
         setItems(newItems);
     };
 

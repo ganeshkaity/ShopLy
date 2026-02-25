@@ -64,6 +64,7 @@ body {
 .hover-lift {
   transition: transform 200ms ease;
 }
+
 .hover-lift:hover {
   transform: translateY(-2px);
 }
@@ -78,29 +79,80 @@ body {
 ::-webkit-scrollbar {
   width: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #d1d5db;
   border-radius: 9999px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }
 
 /* Page transitions */
-.page-enter { opacity: 0; }
-.page-enter-active { opacity: 1; transition: opacity 300ms ease-in; }
+.page-enter {
+  opacity: 0;
+}
+
+.page-enter-active {
+  opacity: 1;
+  transition: opacity 300ms ease-in;
+}
 
 /* Skeleton shimmer */
 @keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .animate-shimmer {
   animation: shimmer 2s infinite linear;
+}
+
+@keyframes scroll-down {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+
+  50% {
+    transform: translateY(6px);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+}
+
+@keyframes bounce-subtle {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-scroll-down {
+  animation: scroll-down 2s infinite ease-in-out;
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s infinite ease-in-out;
 }
 
 /* Scrollbar hide utility */
@@ -108,13 +160,42 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Thin Pink Scrollbar utility */
+.scrollbar-thin-pink::-webkit-scrollbar {
+  height: 2px;
+}
+
+.scrollbar-thin-pink::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin-pink::-webkit-scrollbar-thumb {
+  background: var(--color-primary-light);
+  border-radius: 9999px;
+}
+
+.scrollbar-thin-pink::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}
+
 /* Voice wave animation */
 @keyframes voice-wave {
-  0%, 100% { height: 8px; opacity: 0.5; }
-  50% { height: 48px; opacity: 1; }
+
+  0%,
+  100% {
+    height: 8px;
+    opacity: 0.5;
+  }
+
+  50% {
+    height: 48px;
+    opacity: 1;
+  }
 }
 
 .animate-voice-wave {

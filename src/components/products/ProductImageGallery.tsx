@@ -36,13 +36,13 @@ export function ProductImageGallery({ images, name }: ImageGalleryProps) {
             </div>
 
             {images.length > 1 && (
-                <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                <div className="flex gap-2 md:gap-4 overflow-x-auto pb-2 scrollbar-hide">
                     {images.map((img, idx) => (
                         <button
                             key={idx}
                             onClick={() => setActiveImage(idx)}
                             className={cn(
-                                "relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-all",
+                                "relative h-14 w-14 md:h-20 md:w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-all",
                                 activeImage === idx ? "border-primary scale-105" : "border-transparent opacity-70 hover:opacity-100"
                             )}
                         >

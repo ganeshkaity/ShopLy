@@ -273,6 +273,222 @@ export function ProductForm({ initialData, productId, isEdit }: ProductFormProps
                                 </div>
                             </div>
 
+                            {/* Variants Section */}
+                            <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10 space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="font-bold text-lg">Product Variants</h3>
+                                        <p className="text-xs text-muted-foreground">Add options like Size, Color, or Modules with custom pricing.</p>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                            const newVariant = { id: Date.now().toString(), name: "", options: [] };
+                                            setFormData((prev: any) => ({ ...prev, variants: [...(prev.variants || []), newVariant] }));
+                                        }}
+                                        className="rounded-full gap-2 border-primary/20 text-primary"
+                                    >
+                                        <Plus className="h-4 w-4" /> Add Variant Category
+                                    </Button>
+                                </div>
+
+                                {formData.variants?.map((variant: any, vIdx: number) => (
+                                    <div key={variant.id} className="bg-white p-4 rounded-xl border border-border space-y-4 shadow-sm relative">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="absolute top-2 right-2 h-8 w-8 text-red-500 hover:bg-red-50 rounded-full"
+                                            onClick={() => {
+                                                const newVariants = [...formData.variants];
+                                                newVariants.splice(vIdx, 1);
+                                                setFormData((prev: any) => ({ ...prev, variants: newVariants }));
+                                            }}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+
+                                        <div className="max-w-xs">
+                                            <Input
+                                                label="Variant Header (e.g. Size)"
+                                                value={variant.name}
+                                                onChange={(e) => {
+                                                    const newVariants = [...formData.variants];
+                                                    newVariants[vIdx].name = e.target.value;
+                                                    setFormData((prev: any) => ({ ...prev, variants: newVariants }));
+                                                }}
+                                                placeholder="Enter variant name..."
+                                            />
+                                        </div>
+
+                                        <div className="space-y-3 pl-4 border-l-2 border-primary/10">
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Options (Relative Price Adjustments)</h4>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-7 text-[10px] font-bold text-primary hover:bg-primary/5 rounded-full px-3"
+                                                    onClick={() => {
+                                                        const newVariants = [...formData.variants];
+                                                        newVariants[vIdx].options.push({
+                                                            id: Date.now().toString(),
+                                                            value: "",
+                                                            priceAdjustment: 0,
+                                                            adjustmentType: "+"
+                                                        });
+                                                        setFormData((prev: any) => ({ ...prev, variants: newVariants }));
+                                                    }}
+                                                >
+                                                    <Plus className="h-3 w-3 mr-1" /> Add Option
+                                                </Button>
+                                            </div>
+
+                                            {variant.options.map((option: any, oIdx: number) => (
+                                                <div key={option.id} className="grid grid-cols-12 gap-3 items-end bg-gray-50/50 p-2 rounded-lg border border-primary/5">
+                                                    <div className="col-span-5">
+                                                        <Input
+                                                            label="Option Value"
+                                                            value={option.value}
+                                                            onChange={(e) => {
+                                                                const newVariants = [...formData.variants];
+                                                                newVariants[vIdx].options[oIdx].value = e.target.value;
+                                                                setFormData((prev: any) => ({ ...prev, variants: newVariants }));
+                                                            }}
+                                                            placeholder="Small, XL, Red..."
+                                                        />
+                                                    </div>
+                                                    <div className="col-span-3">
+                                                        <label className="block text-[10px] font-bold uppercase text-muted-foreground mb-1">Adjustment</label>
+                                                        <select
+                                                            className="w-full h-10 rounded-lg border border-border bg-white p-2 text-sm outline-none"
+                                                            value={option.adjustmentType}
+                                                            onChange={(e) => {
+                                                                const newVariants = [...formData.variants];
+                                                                newVariants[vIdx].options[oIdx].adjustmentType = e.target.value as '+' | '-';
+                                                                setFormData((prev: any) => ({ ...prev, variants: newVariants }));
+                                                            }}
+                                                        >
+                                                            <option value="+">More Than (+)</option>
+                                                            <option value="-">Less Than (-)</option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="col-span-3">
+                                                        <Input
+                                                            label="Amount"
+                                                            type="number"
+                                                            value={option.priceAdjustment}
+                                                            onChange={(e) => {
+                                                                const newVariants = [...formData.variants];
+                                                                newVariants[vIdx].options[oIdx].priceAdjustment = Number(e.target.value);
+                                                                setFormData((prev: any) => ({ ...prev, variants: newVariants }));
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div className="col-span-1 pb-1">
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-10 w-10 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-full"
+                                                            onClick={() => {
+                                                                const newVariants = [...formData.variants];
+                                                                newVariants[vIdx].options.splice(oIdx, 1);
+                                                                setFormData((prev: any) => ({ ...prev, variants: newVariants }));
+                                                            }}
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {(!formData.variants || formData.variants.length === 0) && (
+                                    <div className="text-center py-8 border-2 border-dashed border-primary/10 rounded-2xl">
+                                        <p className="text-sm text-muted-foreground">No variants added yet. Click above to add some.</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Accordions Section */}
+                            <div className="bg-gray-50 p-6 rounded-2xl border border-border space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="font-bold text-lg">Product Accordions</h3>
+                                        <p className="text-xs text-muted-foreground">Add collapsible info sections (e.g., Specs, Care, Shipping).</p>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                            const newAccordion = { id: Date.now().toString(), title: "", content: "" };
+                                            setFormData((prev: any) => ({ ...prev, productAccordions: [...(prev.productAccordions || []), newAccordion] }));
+                                        }}
+                                        className="rounded-full gap-2"
+                                    >
+                                        <Plus className="h-4 w-4" /> Add Accordion
+                                    </Button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {formData.productAccordions?.map((item: any, idx: number) => (
+                                        <div key={item.id} className="bg-white p-4 rounded-xl border border-border space-y-4 relative shadow-sm">
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="absolute top-2 right-2 h-8 w-8 text-red-500 hover:bg-red-50 rounded-full"
+                                                onClick={() => {
+                                                    const newAccs = [...formData.productAccordions];
+                                                    newAccs.splice(idx, 1);
+                                                    setFormData((prev: any) => ({ ...prev, productAccordions: newAccs }));
+                                                }}
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </Button>
+
+                                            <div className="space-y-4">
+                                                <Input
+                                                    label="Accordion Title"
+                                                    value={item.title}
+                                                    onChange={(e) => {
+                                                        const newAccs = [...formData.productAccordions];
+                                                        newAccs[idx].title = e.target.value;
+                                                        setFormData((prev: any) => ({ ...prev, productAccordions: newAccs }));
+                                                    }}
+                                                    placeholder="e.g. Dimensions & Weight"
+                                                />
+                                                <div>
+                                                    <label className="block text-[10px] font-bold uppercase text-muted-foreground mb-1 mt-2">Content (Markdown Supported)</label>
+                                                    <textarea
+                                                        className="w-full rounded-lg border border-border bg-white p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 min-h-[100px] font-mono"
+                                                        value={item.content}
+                                                        onChange={(e) => {
+                                                            const newAccs = [...formData.productAccordions];
+                                                            newAccs[idx].content = e.target.value;
+                                                            setFormData((prev: any) => ({ ...prev, productAccordions: newAccs }));
+                                                        }}
+                                                        placeholder="Detailed information for this section..."
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    {(!formData.productAccordions || formData.productAccordions.length === 0) && (
+                                        <div className="text-center py-6 border border-dashed border-border rounded-xl">
+                                            <p className="text-xs text-muted-foreground italic">No extra accordions added.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
                             <div className="space-y-4 border-t border-border pt-4">
                                 <div>
                                     <div className="flex items-center justify-between mb-1.5">

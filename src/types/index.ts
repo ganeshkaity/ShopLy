@@ -27,6 +27,19 @@ export interface ShippingAddress {
 
 export type ProductType = 'PHYSICAL' | 'DIGITAL';
 
+export interface VariantOption {
+    id: string;
+    value: string;
+    priceAdjustment: number;
+    adjustmentType: '+' | '-';
+}
+
+export interface Variant {
+    id: string;
+    name: string; // e.g., "Size", "Color"
+    options: VariantOption[];
+}
+
 export interface Product {
     id: string;
     name: string;
@@ -50,6 +63,8 @@ export interface Product {
     codAvailable?: boolean;
     securePayment?: boolean;
     secondaryTag?: string;
+    variants?: Variant[];
+    productAccordions?: { id: string; title: string; content: string }[];
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
@@ -65,6 +80,7 @@ export interface CartItem {
     type: ProductType;
     slug?: string;
     stock?: number;
+    selectedVariants?: Record<string, string>; // { "Size": "M", "Color": "Red" }
 }
 
 export interface WishlistItem {

@@ -206,7 +206,7 @@ export default function AdminSettingsPage() {
                     <CardContent className="p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <h3 className="text-lg font-semibold flex items-center gap-2">
-                                <ImageIcon className="h-5 w-5 text-primary" /> Home Page Banners (16:9)
+                                <ImageIcon className="h-5 w-5 text-primary" /> Home Page Banners (1440:370)
                             </h3>
                             <Button
                                 variant="outline"
@@ -237,7 +237,7 @@ export default function AdminSettingsPage() {
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-3">
-                                            <div className="aspect-video bg-white rounded-xl border-2 border-dashed border-border overflow-hidden relative flex items-center justify-center group/img">
+                                            <div className="aspect-[1440/370] bg-white rounded-xl border-2 border-dashed border-border overflow-hidden relative flex items-center justify-center group/img">
                                                 {banner.imageUrl ? (
                                                     <>
                                                         <img src={banner.imageUrl} alt="Banner Preview" className="w-full h-full object-cover" />
@@ -251,8 +251,10 @@ export default function AdminSettingsPage() {
                                                                     <Loader2 className="h-10 w-10 text-primary animate-spin" />
                                                                 )}
                                                                 <div className="flex flex-col items-center">
-                                                                    <span className="text-sm font-bold text-gray-900 capitalize">
-                                                                        {uploadStatus[banner.id].stage}...
+                                                                    <span className="text-sm font-bold text-gray-900">
+                                                                        {uploadStatus[banner.id].stage === 'compressing' ? 'Compressing Image...' :
+                                                                            uploadStatus[banner.id].stage === 'uploading' ? 'Uploading to Server...' :
+                                                                                'Complete!'}
                                                                     </span>
                                                                     {uploadStatus[banner.id].stage === 'compressing' && (
                                                                         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">Optimizing Quality</span>
@@ -274,8 +276,8 @@ export default function AdminSettingsPage() {
                                                                             try {
                                                                                 setUploadStatus(prev => ({ ...prev, [banner.id]: { stage: 'compressing' } }));
 
-                                                                                // Compress image to WebP < 100KB
-                                                                                const compressedBlob = await compressImage(file, { targetSizeKB: 100 });
+                                                                                // Compress image to WebP < 80KB (targeting 70-100KB range)
+                                                                                const compressedBlob = await compressImage(file, { targetSizeKB: 80 });
                                                                                 const compressedFile = new File([compressedBlob], `${banner.id}.webp`, { type: 'image/webp' });
 
                                                                                 setUploadStatus(prev => ({ ...prev, [banner.id]: { stage: 'uploading' } }));
@@ -314,7 +316,7 @@ export default function AdminSettingsPage() {
                                                 ) : (
                                                     <label className="cursor-pointer flex flex-col items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
                                                         <Plus className="h-8 w-8" />
-                                                        <span className="text-xs font-bold uppercase tracking-wider">Upload 16:9 Image</span>
+                                                        <span className="text-xs font-bold uppercase tracking-wider">Upload 1440:370 Image</span>
 
                                                         {/* Initial Upload Overlay */}
                                                         {uploadStatus[banner.id] && (
@@ -325,8 +327,10 @@ export default function AdminSettingsPage() {
                                                                     <Loader2 className="h-10 w-10 text-primary animate-spin" />
                                                                 )}
                                                                 <div className="flex flex-col items-center">
-                                                                    <span className="text-sm font-bold text-gray-900 capitalize">
-                                                                        {uploadStatus[banner.id].stage}...
+                                                                    <span className="text-sm font-bold text-gray-900">
+                                                                        {uploadStatus[banner.id].stage === 'compressing' ? 'Compressing Image...' :
+                                                                            uploadStatus[banner.id].stage === 'uploading' ? 'Uploading to Server...' :
+                                                                                'Complete!'}
                                                                     </span>
                                                                     {uploadStatus[banner.id].stage === 'compressing' && (
                                                                         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">Optimizing Quality</span>
@@ -344,8 +348,8 @@ export default function AdminSettingsPage() {
                                                                     try {
                                                                         setUploadStatus(prev => ({ ...prev, [banner.id]: { stage: 'compressing' } }));
 
-                                                                        // Compress image to WebP < 100KB
-                                                                        const compressedBlob = await compressImage(file, { targetSizeKB: 100 });
+                                                                        // Compress image to WebP < 80KB (targeting 70-100KB range)
+                                                                        const compressedBlob = await compressImage(file, { targetSizeKB: 80 });
                                                                         const compressedFile = new File([compressedBlob], `${banner.id}.webp`, { type: 'image/webp' });
 
                                                                         setUploadStatus(prev => ({ ...prev, [banner.id]: { stage: 'uploading' } }));
@@ -386,6 +390,24 @@ export default function AdminSettingsPage() {
                                         <div className="space-y-4 self-center">
                                             <div className="relative">
                                                 <div className="absolute left-3 top-9 -translate-y-1/2">
+                                                    <ImageIcon className="h-4 w-4 text-primary" />
+                                                </div>
+                                                <Input
+                                                    label="Image URL"
+                                                    className="pl-9"
+                                                    placeholder="https://example.com/banner.jpg"
+                                                    value={banner.imageUrl}
+                                                    onChange={(e) => {
+                                                        const newBanners = [...(settings.banners || [])];
+                                                        newBanners[index].imageUrl = e.target.value;
+                                                        setSettings({ ...settings, banners: newBanners });
+                                                    }}
+                                                    helperText="Paste a link or upload an image on the left."
+                                                />
+                                            </div>
+
+                                            <div className="relative">
+                                                <div className="absolute left-3 top-9 -translate-y-1/2">
                                                     <LinkIcon className="h-4 w-4 text-primary" />
                                                 </div>
                                                 <Input
@@ -412,6 +434,18 @@ export default function AdminSettingsPage() {
                                     <p className="text-sm">No banners added yet. Add banners to show a slider on the home page.</p>
                                 </div>
                             )}
+                        </div>
+
+                        <div className="pt-6 border-t border-border flex justify-end">
+                            <Button
+                                onClick={handleSave}
+                                isLoading={saving}
+                                variant="outline"
+                                size="sm"
+                                className="rounded-full px-6 border-primary/20 text-primary hover:bg-primary/5"
+                            >
+                                <Save className="h-4 w-4 mr-2" /> Save Banners
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>

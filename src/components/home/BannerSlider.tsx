@@ -73,11 +73,13 @@ export function BannerSlider({ banners }: BannerSliderProps) {
     if (!banners || banners.length === 0) return null;
 
     return (
-        <section className="container-custom py-0 group/slider relative overflow-hidden">
+        <section className={cn(
+            "px-0 py-0 group/slider relative overflow-hidden",
+        )}>
             <div
                 ref={sliderRef}
                 className={cn(
-                    "relative aspect-video w-full rounded-[2rem] overflow-hidden shadow-2xl bg-gray-100",
+                    "relative aspect-[1440/370] w-full rounded-none overflow-hidden shadow-2xl bg-gray-100",
                     isDragging ? "cursor-grabbing" : "cursor-pointer"
                 )}
                 onMouseDown={handleMouseDown}
