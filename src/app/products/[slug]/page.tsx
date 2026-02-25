@@ -130,7 +130,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
         }
     };
 
-    const isSale = product.compareAtPrice && product.compareAtPrice > product.price;
+    const isSale = !!product.compareAtPrice && product.compareAtPrice > product.price;
 
     return (
         <div className="container-custom py-8 md:py-16">

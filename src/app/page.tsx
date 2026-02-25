@@ -184,38 +184,43 @@ export default function HomePage() {
                 } select-none`}
               style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
-              {categories.map((category) => (
-                <Link
-                  key={category.id}
-                  href={`/products?category=${category.name}`}
-                  className="group flex-none w-[180px] md:w-[240px] snap-start"
-                  onClick={handleLinkClick}
-                  draggable={false}
-                >
-                  <Card hover className="h-full border-none overflow-hidden relative aspect-[4/5] md:aspect-[3/4]">
-                    <div className="absolute inset-0">
-                      <img
-                        src={category.backgroundImage}
-                        alt={category.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              {loading || categories.length === 0 ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="flex-none w-[180px] md:w-[240px] snap-start">
+                    <div className="flex flex-col gap-3">
+                      <Skeleton className="aspect-[4/5] md:aspect-[3/4] w-full rounded-[2rem]" />
+                      <Skeleton className="h-4 w-2/3 mx-auto" />
                     </div>
-                    <CardContent className="relative h-full flex flex-col items-center justify-end p-6 gap-3 z-10 text-white">
-                      <div className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-sm group-hover:scale-110 transition-transform pointer-events-none mb-2">
-                        <ShoppingBag className="h-6 w-6" />
+                  </div>
+                ))
+              ) : (
+                categories.map((category) => (
+                  <Link
+                    key={category.id}
+                    href={`/products?category=${category.name}`}
+                    className="group flex-none w-[180px] md:w-[240px] snap-start"
+                    onClick={handleLinkClick}
+                    draggable={false}
+                  >
+                    <Card hover className="h-full border-none overflow-hidden relative aspect-[4/5] md:aspect-[3/4] rounded-[2rem]">
+                      <div className="absolute inset-0">
+                        <img
+                          src={category.backgroundImage}
+                          alt={category.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                       </div>
-                      <span className="text-base font-bold text-center pointer-events-none">{category.name}</span>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-
-              {categories.length === 0 && Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="flex-none w-[180px] md:w-[240px] snap-start">
-                  <Skeleton className="h-[240px] w-full rounded-2xl" />
-                </div>
-              ))}
+                      <CardContent className="relative h-full flex flex-col items-center justify-end p-6 gap-3 z-10 text-white">
+                        <div className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-sm group-hover:scale-110 transition-transform pointer-events-none mb-2">
+                          <ShoppingBag className="h-6 w-6" />
+                        </div>
+                        <span className="text-base font-bold text-center pointer-events-none">{category.name}</span>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))
+              )}
             </div>
           </div>
           <style dangerouslySetInnerHTML={{
@@ -242,8 +247,20 @@ export default function HomePage() {
           </div>
 
           {loading ? (
-            <div className="flex h-64 items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex flex-col gap-4">
+                  <Skeleton className="aspect-square w-full rounded-3xl" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-3 w-1/4" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <div className="flex justify-between items-center pt-2">
+                      <Skeleton className="h-5 w-1/3" />
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : products.length > 0 ? (
             <div className="space-y-12">

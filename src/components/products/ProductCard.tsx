@@ -90,7 +90,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
                 {/* Badges */}
                 <div className="absolute left-3 top-3 flex flex-col gap-2">
                     {product.stock <= 0 && <Badge variant="destructive">Out of Stock</Badge>}
-                    {product.compareAtPrice && product.compareAtPrice > product.price && (
+                    {!!product.compareAtPrice && product.compareAtPrice > product.price && (
                         <Badge variant="secondary">
                             -{Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)}%
                         </Badge>
@@ -125,7 +125,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
                         <p className="text-lg font-bold text-foreground">
                             {formatCurrency(product.price)}
                         </p>
-                        {product.compareAtPrice && product.compareAtPrice > product.price && (
+                        {!!product.compareAtPrice && product.compareAtPrice > product.price && (
                             <p className="text-xs text-muted-foreground line-through">
                                 {formatCurrency(product.compareAtPrice)}
                             </p>

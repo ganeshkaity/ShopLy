@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { ProductCard } from "./ProductCard";
 import { Product } from "@/types";
 import { Spinner } from "../ui/Spinner";
+import { Skeleton } from "../ui/Skeleton";
 
 interface ProductGridProps {
     products: Product[];
@@ -12,8 +13,20 @@ interface ProductGridProps {
 export function ProductGrid({ products, loading, className }: ProductGridProps) {
     if (loading && products.length === 0) {
         return (
-            <div className="flex h-[400px] w-full items-center justify-center">
-                <Spinner size="lg" />
+            <div className={cn("grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4", className)}>
+                {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="flex flex-col gap-4">
+                        <Skeleton className="aspect-square w-full rounded-2xl md:rounded-3xl" />
+                        <div className="space-y-2">
+                            <Skeleton className="h-3 w-1/4" />
+                            <Skeleton className="h-4 w-3/4" />
+                            <div className="flex justify-between items-center pt-2">
+                                <Skeleton className="h-5 w-1/3" />
+                                <Skeleton className="h-8 w-8 rounded-full" />
+                            </div>
+                        </div>
+                    </div>
+                ))}
             </div>
         );
     }
@@ -35,9 +48,21 @@ export function ProductGrid({ products, loading, className }: ProductGridProps) 
                 <ProductCard key={product.id} product={product} />
             ))}
             {loading && (
-                <div className="col-span-full flex justify-center py-8">
-                    <Spinner />
-                </div>
+                <>
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={`load-more-${i}`} className="flex flex-col gap-4">
+                            <Skeleton className="aspect-square w-full rounded-2xl md:rounded-3xl" />
+                            <div className="space-y-2">
+                                <Skeleton className="h-3 w-1/4" />
+                                <Skeleton className="h-4 w-3/4" />
+                                <div className="flex justify-between items-center pt-2">
+                                    <Skeleton className="h-5 w-1/3" />
+                                    <Skeleton className="h-8 w-8 rounded-full" />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </>
             )}
         </div>
     );

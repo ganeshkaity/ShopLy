@@ -7,7 +7,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Product } from "@/types";
 import { createProduct, updateProduct, deleteProduct } from "@/services/product.service";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -45,6 +45,8 @@ export default function AdminProductsPage() {
     const [uploadingImage, setUploadingImage] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [categories, setCategories] = useState<Category[]>([]);
+    const [imageInputMode, setImageInputMode] = useState<Record<string, 'upload' | 'link'>>({ cover: 'upload', additional: 'upload' });
+    const [tempUrl, setTempUrl] = useState({ cover: '', additional: '' });
     const { toast } = useToast();
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isCover: boolean) => {
@@ -90,6 +92,26 @@ export default function AdminProductsPage() {
             setUploadingImage(false);
             e.target.value = ""; // clear input
         }
+    };
+
+    const handleAddImageUrl = (isCover: boolean) => {
+        const urlValue = isCover ? tempUrl.cover : tempUrl.additional;
+        if (!urlValue.trim()) return;
+
+        setFormData(prev => {
+            const newImages = [...prev.images];
+            if (isCover) {
+                if (newImages.length === 0) newImages.push(urlValue);
+                else newImages[0] = urlValue;
+            } else {
+                if (newImages.length === 0) newImages.push(""); // ensure cover slot exists
+                newImages.push(urlValue);
+            }
+            return { ...prev, images: newImages };
+        });
+
+        setTempUrl(prev => ({ ...prev, [isCover ? 'cover' : 'additional']: '' }));
+        toast("Image link added", "success");
     };
 
     const removeImage = (index: number) => {
@@ -319,7 +341,13 @@ export default function AdminProductsPage() {
 
                     <div className="space-y-4 border-t border-border pt-4">
                         <div>
-                            <label className="block text-sm font-medium mb-1.5">Cover Image (Required)</label>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <label className="block text-sm font-medium">Cover Image (Required)</label>
+                                <div className="flex border border-border rounded-lg overflow-hidden text-[10px] font-bold">
+                                    <button onClick={() => setImageInputMode(p => ({ ...p, cover: 'upload' }))} className={cn("px-2 py-1 transition-colors", imageInputMode.cover === 'upload' ? "bg-primary text-white" : "bg-white hover:bg-gray-50")}>UPLOAD</button>
+                                    <button onClick={() => setImageInputMode(p => ({ ...p, cover: 'link' }))} className={cn("px-2 py-1 transition-colors", imageInputMode.cover === 'link' ? "bg-primary text-white" : "bg-white hover:bg-gray-50")}>LINK</button>
+                                </div>
+                            </div>
                             {formData.images[0] ? (
                                 <div className="relative h-32 w-32 border border-border rounded-lg overflow-hidden mb-3">
                                     <Image src={formData.images[0]} alt="Cover" fill className="object-cover" unoptimized />
@@ -330,21 +358,45 @@ export default function AdminProductsPage() {
                                 </div>
                             ) : (
                                 <div className="mb-3">
-                                    <input type="file" id="cover-upload" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, true)} disabled={uploadingImage} />
-                                    <label htmlFor="cover-upload" className="flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent transition-colors">
-                                        {uploadingImage ? <Spinner size="sm" /> : (
-                                            <>
-                                                <Upload className="h-6 w-6 text-muted-foreground mb-2" />
-                                                <span className="text-xs font-medium text-muted-foreground">Upload Cover</span>
-                                            </>
-                                        )}
-                                    </label>
+                                    {imageInputMode.cover === 'upload' ? (
+                                        <>
+                                            <input type="file" id="cover-upload" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, true)} disabled={uploadingImage} />
+                                            <label htmlFor="cover-upload" className="flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-border rounded-xl cursor-pointer hover:bg-accent transition-colors">
+                                                {uploadingImage ? <Spinner size="sm" /> : (
+                                                    <>
+                                                        <Upload className="h-6 w-6 text-muted-foreground mb-2" />
+                                                        <span className="text-xs font-medium text-muted-foreground">Upload Cover</span>
+                                                    </>
+                                                )}
+                                            </label>
+                                        </>
+                                    ) : (
+                                        <div className="flex flex-col gap-2">
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="url"
+                                                    placeholder="Paste image URL here..."
+                                                    className="flex-grow rounded-lg border border-border bg-white p-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                                                    value={tempUrl.cover}
+                                                    onChange={(e) => setTempUrl(prev => ({ ...prev, cover: e.target.value }))}
+                                                />
+                                                <Button type="button" size="sm" onClick={() => handleAddImageUrl(true)}>Add</Button>
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground">Provide a direct path to an image (e.g. .jpg, .png)</p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium mb-1.5">Additional Images</label>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <label className="block text-sm font-medium">Additional Images</label>
+                                <div className="flex border border-border rounded-lg overflow-hidden text-[10px] font-bold">
+                                    <button onClick={() => setImageInputMode(p => ({ ...p, additional: 'upload' }))} className={cn("px-2 py-1 transition-colors", imageInputMode.additional === 'upload' ? "bg-primary text-white" : "bg-white hover:bg-gray-50")}>UPLOAD</button>
+                                    <button onClick={() => setImageInputMode(p => ({ ...p, additional: 'link' }))} className={cn("px-2 py-1 transition-colors", imageInputMode.additional === 'link' ? "bg-primary text-white" : "bg-white hover:bg-gray-50")}>LINK</button>
+                                </div>
+                            </div>
                             <div className="flex flex-wrap gap-3 mb-3">
                                 {formData.images.slice(1).map((url, i) => url ? (
                                     <div key={i} className="relative h-20 w-20 border border-border rounded-lg overflow-hidden shrink-0">
@@ -355,12 +407,28 @@ export default function AdminProductsPage() {
                                     </div>
                                 ) : null)}
 
-                                <input type="file" id="additional-upload" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, false)} disabled={uploadingImage || !formData.images[0]} />
-                                <label htmlFor="additional-upload" className={`flex flex-col items-center justify-center w-20 h-20 border-2 border-dashed border-border rounded-lg cursor-pointer transition-colors shrink-0 ${!formData.images[0] ? 'opacity-50 cursor-not-allowed' : 'hover:bg-accent'}`}>
-                                    {uploadingImage ? <Spinner size="sm" /> : <Plus className="h-5 w-5 text-muted-foreground" />}
-                                </label>
+                                {imageInputMode.additional === 'upload' ? (
+                                    <>
+                                        <input type="file" id="additional-upload" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, false)} disabled={uploadingImage || !formData.images[0]} />
+                                        <label htmlFor="additional-upload" className={`flex flex-col items-center justify-center w-20 h-20 border-2 border-dashed border-border rounded-xl cursor-pointer transition-colors shrink-0 ${!formData.images[0] ? 'opacity-50 cursor-not-allowed' : 'hover:bg-accent'}`}>
+                                            {uploadingImage ? <Spinner size="sm" /> : <Plus className="h-5 w-5 text-muted-foreground" />}
+                                        </label>
+                                    </>
+                                ) : (
+                                    <div className={cn("flex-grow flex gap-2 min-w-[200px]", !formData.images[0] && "opacity-50")}>
+                                        <input
+                                            type="url"
+                                            placeholder="Additional image URL..."
+                                            className="flex-grow rounded-lg border border-border bg-white p-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                                            value={tempUrl.additional}
+                                            onChange={(e) => setTempUrl(prev => ({ ...prev, additional: e.target.value }))}
+                                            disabled={!formData.images[0]}
+                                        />
+                                        <Button type="button" size="sm" onClick={() => handleAddImageUrl(false)} disabled={!formData.images[0]}>Add</Button>
+                                    </div>
+                                )}
                             </div>
-                            {!formData.images[0] && <p className="text-xs text-muted-foreground">Upload a cover image first to add more images.</p>}
+                            {!formData.images[0] && <p className="text-xs text-muted-foreground">Upload or link a cover image first to add more images.</p>}
                         </div>
                     </div>
 
