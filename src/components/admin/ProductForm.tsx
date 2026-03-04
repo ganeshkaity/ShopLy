@@ -29,7 +29,18 @@ const EMPTY_PRODUCT: any = {
     isActive: true, weight: 0, productDetails: "", minOrderQty: 1,
     freeShipping: false, returnAvailable: false, returnDays: 7,
     codAvailable: false, securePayment: true,
+    badgeLabel: "", badgeVariant: "default"
 };
+
+const BADGE_OPTIONS = [
+    { label: "None", value: "", variant: "default" },
+    { label: "New Arrival", value: "New Arrival", variant: "info" },
+    { label: "Best Seller", value: "Best Seller", variant: "success" },
+    { label: "Trending", value: "Trending", variant: "secondary" },
+    { label: "Limited", value: "Limited", variant: "warning" },
+    { label: "Featured", value: "Featured", variant: "default" },
+    { label: "Sale", value: "Sale", variant: "destructive" },
+];
 
 export function ProductForm({ initialData, productId, isEdit }: ProductFormProps) {
     const router = useRouter();
@@ -171,6 +182,8 @@ export function ProductForm({ initialData, productId, isEdit }: ProductFormProps
         codAvailable: !!formData.codAvailable,
         securePayment: formData.securePayment !== undefined ? formData.securePayment : true,
         secondaryTag: formData.secondaryTag || "",
+        badgeLabel: formData.badgeLabel || "",
+        badgeVariant: formData.badgeVariant || "default",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     };
@@ -204,6 +217,35 @@ export function ProductForm({ initialData, productId, isEdit }: ProductFormProps
                             </div>
 
                             <Input label="Secondary Tag (e.g. 2026 Edition)" value={formData.secondaryTag} onChange={(e) => setFormData((prev: any) => ({ ...prev, secondaryTag: e.target.value }))} />
+
+                            <div>
+                                <label className="block text-sm font-medium mb-1.5">Product Badge</label>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <select
+                                        className="w-full rounded-lg border border-border bg-white p-2.5 text-sm outline-none"
+                                        value={formData.badgeLabel}
+                                        onChange={(e) => {
+                                            const option = BADGE_OPTIONS.find(o => o.value === e.target.value);
+                                            setFormData((prev: any) => ({
+                                                ...prev,
+                                                badgeLabel: e.target.value,
+                                                badgeVariant: option?.variant || "default"
+                                            }));
+                                        }}
+                                    >
+                                        {BADGE_OPTIONS.map(opt => (
+                                            <option key={opt.label} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                    </select>
+                                    <div className="flex items-center">
+                                        {formData.badgeLabel && (
+                                            <Badge variant={formData.badgeVariant as any}>
+                                                {formData.badgeLabel}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
 
                             <div>
                                 <label className="block text-sm font-medium mb-1.5">Short Description</label>

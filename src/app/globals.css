@@ -238,3 +238,78 @@ body {
 .animate-truck-move-vertical {
   animation: truck-move-vertical 1.5s infinite ease-in-out;
 }
+
+/* Ribbon Badge Styles */
+.ribbon-wrapper {
+  position: absolute;
+  top: -4px;
+  /* Move up to touch the top edge */
+  left: -8px;
+  z-index: 30;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.ribbon-content {
+  position: relative;
+  background-color: var(--badge-bg, #1a1a1a);
+  color: white;
+  padding: 4px 16px 4px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  /* Simple triangle point on the right */
+  clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 50%, 100% 100%, 0 100%);
+}
+
+.ribbon-fold {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  width: 8px;
+  height: 8px;
+  background-color: var(--badge-fold-bg, #000);
+  /* Triangular fold effect wrapping behind */
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+  filter: brightness(0.6);
+}
+
+/* Badge Color Variants */
+.ribbon-default {
+  --badge-bg: #1a1a1a;
+  --badge-fold-bg: #000;
+}
+
+.ribbon-secondary {
+  --badge-bg: #4b5563;
+  --badge-fold-bg: #1f2937;
+}
+
+.ribbon-success {
+  --badge-bg: #10b981;
+  --badge-fold-bg: #047857;
+}
+
+.ribbon-destructive {
+  --badge-bg: #ef4444;
+  --badge-fold-bg: #b91c1c;
+}
+
+.ribbon-warning {
+  --badge-bg: #f59e0b;
+  --badge-fold-bg: #b45309;
+}
+
+.ribbon-info {
+  --badge-bg: #3b82f6;
+  --badge-fold-bg: #1d4ed8;
+}
+
+.ribbon-primary {
+  --badge-bg: #f472b6;
+  --badge-fold-bg: #be185d;
+}

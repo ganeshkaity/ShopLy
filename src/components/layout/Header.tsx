@@ -133,7 +133,7 @@ export function Header() {
 
     return (
         <>
-            <header className="sticky top-0 z-40 w-full border-b border-border bg-white/80 backdrop-blur-md">
+            <header className="sticky top-0 z-50 w-full border-b border-border bg-white/80 backdrop-blur-md">
                 <div className="container-custom flex h-16 items-center justify-between">
                     {/* Mobile Menu Toggle */}
                     <Button

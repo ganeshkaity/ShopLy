@@ -91,6 +91,9 @@ export default function AdminProductsPage() {
                                     <p className="font-medium truncate">{product.name}</p>
                                     <div className="flex items-center gap-2 mt-1">
                                         <Badge variant="secondary" className="text-[10px]">{product.category}</Badge>
+                                        {product.badgeLabel && (
+                                            <Badge variant={product.badgeVariant} className="text-[10px]">{product.badgeLabel}</Badge>
+                                        )}
                                         <span className="text-sm font-bold">{formatCurrency(product.price)}</span>
                                         <span className="text-xs text-muted-foreground">Stock: {product.stock}</span>
                                         {!product.isActive && <Badge variant="destructive" className="text-[10px]">Inactive</Badge>}

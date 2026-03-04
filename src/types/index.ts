@@ -63,6 +63,8 @@ export interface Product {
     codAvailable?: boolean;
     securePayment?: boolean;
     secondaryTag?: string;
+    badgeLabel?: string;
+    badgeVariant?: 'default' | 'secondary' | 'outline' | 'success' | 'destructive' | 'warning' | 'info';
     variants?: Variant[];
     productAccordions?: { id: string; title: string; content: string }[];
     isActive: boolean;

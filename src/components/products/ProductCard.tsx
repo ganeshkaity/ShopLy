@@ -78,7 +78,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
     const rating = 4.7;
 
     return (
-        <Card hover className={cn("group flex flex-col h-full", className)}>
+        <Card hover className={cn("group flex flex-col h-full overflow-visible relative", className)}>
             <div className="relative aspect-square overflow-hidden bg-white">
                 <Link href={`/products/${product.slug}`} className="block h-full w-full p-0">
                     {product.images?.[0] ? (
@@ -97,8 +97,10 @@ export function ProductCard({ product, className }: ProductCardProps) {
                     )}
                 </Link>
 
-                {/* Badges */}
-                <div className="absolute left-3 top-3 flex flex-col gap-2">
+                <div className={cn(
+                    "absolute left-3 flex flex-col gap-2 transition-all duration-300",
+                    product.badgeLabel ? "top-11" : "top-3"
+                )}>
                     {product.stock <= 0 && <Badge variant="destructive">Out of Stock</Badge>}
                     {!!product.compareAtPrice && product.compareAtPrice > product.price && (
                         <Badge variant="success">
@@ -154,6 +156,16 @@ export function ProductCard({ product, className }: ProductCardProps) {
                     )}
                 </div>
             </div>
+
+            {/* Ribbon Badge (Moved outside overflow-hidden div) */}
+            {product.badgeLabel && (
+                <div className={cn("ribbon-wrapper", `ribbon-${product.badgeVariant || "default"}`)}>
+                    <div className="ribbon-content">
+                        {product.badgeLabel}
+                    </div>
+                    <div className="ribbon-fold" />
+                </div>
+            )}
 
             <CardContent className="flex flex-col flex-grow p-3 gap-0.5">
                 <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
