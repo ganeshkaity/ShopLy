@@ -46,7 +46,7 @@ export function useProducts({ category, sortBy, searchQuery, minPrice, maxPrice,
             }
 
             setLastDoc(result.lastDoc);
-            setHasMore(result.hasMore);
+            setHasMore(result.hasMore || false);
             setError(null);
         } catch (err: any) {
             console.error(err);

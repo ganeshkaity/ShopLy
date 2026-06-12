@@ -20,12 +20,18 @@ import { getSettings, DEFAULT_SETTINGS } from "@/services/settings.service";
 import { AppSettings } from "@/types";
 import { useToast } from "@/context/ToastContext";
 import Link from "next/link";
+import { createSupportTicket } from "@/services/user.service";
 
 export default function ContactPage() {
     const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formSubmitted, setFormSubmitted] = useState(false);
+
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+    const [subject, setSubject] = useState("");
+    const [message, setMessage] = useState("");
 
     useEffect(() => {
         getSettings().then(setSettings).catch(console.error);
@@ -35,12 +41,25 @@ export default function ContactPage() {
         e.preventDefault();
         setIsSubmitting(true);
 
-        // Simulate form submission
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        setIsSubmitting(false);
-        setFormSubmitted(true);
-        toast("Message sent successfully! We'll get back to you soon.", "success");
+        try {
+            await createSupportTicket({
+                uid: "guest", // or generate an anonymous id, but "guest" is fine for unauthenticated
+                email: email,
+                subject: `[Contact Form] ${subject} - from ${name}`,
+                message: message
+            });
+            setFormSubmitted(true);
+            toast("Message sent successfully! We'll get back to you soon.", "success");
+            setName("");
+            setEmail("");
+            setSubject("");
+            setMessage("");
+        } catch (error) {
+            console.error("Failed to send message:", error);
+            toast("Failed to send message. Please try again.", "error");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const contactMethods = [
@@ -143,15 +162,36 @@ export default function ContactPage() {
                             ) : (
                                 <form onSubmit={handleSubmit} className="space-y-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <Input label="Full Name" placeholder="John Doe" required />
-                                        <Input label="Email Address" type="email" placeholder="john@example.com" required />
+                                        <Input 
+                                            label="Full Name" 
+                                            placeholder="John Doe" 
+                                            value={name}
+                                            onChange={(e) => setName(e.target.value)}
+                                            required 
+                                        />
+                                        <Input 
+                                            label="Email Address" 
+                                            type="email" 
+                                            placeholder="john@example.com" 
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            required 
+                                        />
                                     </div>
-                                    <Input label="Subject" placeholder="How can we help?" required />
+                                    <Input 
+                                        label="Subject" 
+                                        placeholder="How can we help?" 
+                                        value={subject}
+                                        onChange={(e) => setSubject(e.target.value)}
+                                        required 
+                                    />
                                     <div className="space-y-1.5">
                                         <label className="text-sm font-medium">Message</label>
                                         <textarea
                                             className="w-full rounded-2xl border border-border bg-gray-50/50 p-4 text-sm outline-none focus:ring-2 focus:ring-primary/20 min-h-[150px] transition-all focus:bg-white"
                                             placeholder="Write your message here..."
+                                            value={message}
+                                            onChange={(e) => setMessage(e.target.value)}
                                             required
                                         />
                                     </div>

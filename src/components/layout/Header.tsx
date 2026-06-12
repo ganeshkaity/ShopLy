@@ -24,6 +24,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/context/ToastContext";
 import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
+import { getNotifications, GlobalNotification } from "@/services/notification.service";
 
 const NAV_LINKS = [
     { name: "Home", href: "/" },
@@ -41,6 +42,9 @@ export function Header() {
     const [searchQuery, setSearchQuery] = React.useState("");
     const [isVoiceModalOpen, setIsVoiceModalOpen] = React.useState(false);
     const [transcript, setTranscript] = React.useState("");
+    const [isNotifOpen, setIsNotifOpen] = React.useState(false);
+    const [notifications, setNotifications] = React.useState<GlobalNotification[]>([]);
+    const [unreadCount, setUnreadCount] = React.useState(0);
 
     const [barStyles, setBarStyles] = React.useState<{ duration: number; delay: number }[]>([]);
 
@@ -58,6 +62,29 @@ export function Header() {
     const { items: wishlistItems } = useWishlist();
     const { toast } = useToast();
     const router = useRouter();
+
+    React.useEffect(() => {
+        if (user) {
+            getNotifications().then(data => {
+                setNotifications(data);
+                // Simple unread logic using localStorage
+                const readIds = JSON.parse(localStorage.getItem(`read_notifs_${user.uid}`) || "[]");
+                const unread = data.filter(n => !readIds.includes(n.id)).length;
+                setUnreadCount(unread);
+            }).catch(console.error);
+        }
+    }, [user]);
+
+    const handleOpenNotifs = () => {
+        setIsNotifOpen(!isNotifOpen);
+        setIsUserMenuOpen(false);
+        if (!isNotifOpen && user) {
+            // Mark all as read when opening
+            setUnreadCount(0);
+            const allIds = notifications.map(n => n.id);
+            localStorage.setItem(`read_notifs_${user.uid}`, JSON.stringify(allIds));
+        }
+    };
 
     // Handle sidebar animation lifecycle
     React.useEffect(() => {
@@ -248,14 +275,45 @@ export function Header() {
                                 <Search className="h-5 w-5" />
                             </Button>
                         )}
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="hidden sm:flex relative"
-                            onClick={() => toast("Notifications coming soon!", "info")}
-                        >
-                            <Bell className="h-5 w-5" />
-                        </Button>
+                        
+                        <div className="relative">
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="hidden sm:flex relative"
+                                onClick={handleOpenNotifs}
+                            >
+                                <Bell className="h-5 w-5" />
+                                {unreadCount > 0 && (
+                                    <span className="absolute right-1 top-1 flex h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+                                )}
+                            </Button>
+
+                            {isNotifOpen && (
+                                <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-border bg-white p-2 shadow-2xl animate-in fade-in zoom-in duration-200 z-50">
+                                    <div className="px-3 py-3 border-b border-border flex justify-between items-center">
+                                        <h3 className="font-bold text-sm">Notifications</h3>
+                                    </div>
+                                    <div className="max-h-[300px] overflow-y-auto p-1 space-y-1">
+                                        {notifications.length === 0 ? (
+                                            <p className="text-sm text-center text-gray-500 py-6">No notifications yet</p>
+                                        ) : (
+                                            notifications.map(n => (
+                                                <div key={n.id} className="p-3 rounded-xl hover:bg-gray-50 transition-colors space-y-1 border border-transparent hover:border-gray-100">
+                                                    <div className="flex justify-between items-start">
+                                                        <span className="text-[10px] font-bold uppercase text-primary px-1.5 py-0.5 bg-primary/10 rounded">{n.tag}</span>
+                                                        <span className="text-[10px] text-gray-400">{n.createdAt?.toDate ? n.createdAt.toDate().toLocaleDateString() : ""}</span>
+                                                    </div>
+                                                    <p className="text-sm font-bold text-gray-900">{n.title}</p>
+                                                    <p className="text-xs text-gray-500">{n.message}</p>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         <Link href="/wishlist">
                             <Button variant="ghost" size="icon" className="hidden sm:flex relative">
                                 <Heart className="h-5 w-5" />
@@ -284,7 +342,10 @@ export function Header() {
                                     variant="ghost"
                                     size="icon"
                                     className="rounded-full border border-primary/20 bg-primary/5"
-                                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                                    onClick={() => {
+                                        setIsUserMenuOpen(!isUserMenuOpen);
+                                        setIsNotifOpen(false);
+                                    }}
                                 >
                                     <UserCircle className="h-6 w-6 text-primary" />
                                 </Button>

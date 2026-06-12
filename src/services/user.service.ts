@@ -17,12 +17,28 @@ const USERS_COLLECTION = "users";
 const TICKETS_COLLECTION = "support_tickets";
 const DELETIONS_COLLECTION = "deletion_requests";
 
+export type AddressLabel = "Home" | "Office" | "Work" | "Other";
+
+export interface Address {
+    id: string; // generate unique id client-side
+    label: AddressLabel;
+    fullName: string;
+    phone: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    pincode: string;
+    isDefault: boolean;
+}
+
 export interface UserData {
     uid: string;
     email: string | null;
     displayName: string | null;
     avatarBase64?: string | null;
     phone?: string | null;
+    addresses?: Address[];
     createdAt?: any;
     updatedAt?: any;
 }
@@ -79,6 +95,30 @@ export async function updateUserData(uid: string, data: Partial<UserData>) {
             updatedAt: serverTimestamp(),
         });
     }
+}
+
+/**
+ * Manage User Addresses (Add/Edit/Delete)
+ * Since addresses are small, we can just replace the entire array inside UserData.
+ */
+export async function saveUserAddresses(uid: string, addresses: Address[]) {
+    // Ensure only one default address
+    let defaultCount = 0;
+    const validatedAddresses = addresses.map(addr => {
+        if (addr.isDefault) {
+            defaultCount++;
+            if (defaultCount > 1) {
+                return { ...addr, isDefault: false }; // Only keep first as default if multiple
+            }
+        }
+        return addr;
+    });
+
+    if (validatedAddresses.length > 0 && defaultCount === 0) {
+        validatedAddresses[0].isDefault = true; // Auto-default first
+    }
+
+    await updateUserData(uid, { addresses: validatedAddresses });
 }
 
 /**

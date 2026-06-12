@@ -14,6 +14,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { INDIAN_STATES } from "@/constants";
 import { ShieldCheck, Truck, CreditCard } from "lucide-react";
 import { getSettings } from "@/services/settings.service";
+import { getUserData, Address } from "@/services/user.service";
 import { AppSettings } from "@/types";
 import Link from "next/link";
 
@@ -28,6 +29,8 @@ export default function CheckoutPage() {
     const router = useRouter();
 
     const [settings, setSettings] = useState<AppSettings | null>(null);
+    const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
+    const [useNewAddress, setUseNewAddress] = useState(false);
     const items = buyNowItem ? [buyNowItem] : cartItems;
 
     const [isProcessing, setIsProcessing] = useState(false);
@@ -43,7 +46,32 @@ export default function CheckoutPage() {
 
     useEffect(() => {
         getSettings().then(setSettings).catch(console.error);
-    }, []);
+        if (user) {
+            getUserData(user.uid).then(data => {
+                if (data?.addresses && data.addresses.length > 0) {
+                    setSavedAddresses(data.addresses);
+                    const def = data.addresses.find(a => a.isDefault) || data.addresses[0];
+                    if (def) {
+                        setAddress({
+                            fullName: def.fullName,
+                            phone: def.phone,
+                            addressLine1: def.addressLine1,
+                            addressLine2: def.addressLine2 || "",
+                            city: def.city,
+                            state: def.state,
+                            pincode: def.pincode,
+                        });
+                        setUseNewAddress(false);
+                    }
+                } else {
+                    setUseNewAddress(true);
+                }
+                if (data?.phone && !address.phone) {
+                    setAddress(prev => ({ ...prev, phone: data.phone! }));
+                }
+            });
+        }
+    }, [user]);
 
     if (!user) {
         return (
@@ -67,6 +95,19 @@ export default function CheckoutPage() {
 
     const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setAddress((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+
+    const handleSelectAddress = (addr: Address) => {
+        setAddress({
+            fullName: addr.fullName,
+            phone: addr.phone,
+            addressLine1: addr.addressLine1,
+            addressLine2: addr.addressLine2 || "",
+            city: addr.city,
+            state: addr.state,
+            pincode: addr.pincode,
+        });
+        setUseNewAddress(false);
     };
 
     const loadRazorpayScript = (): Promise<boolean> => {
@@ -172,26 +213,57 @@ export default function CheckoutPage() {
                 <div className="lg:col-span-2 space-y-6">
                     <Card>
                         <CardContent className="p-6 space-y-4">
-                            <h3 className="font-semibold text-lg flex items-center gap-2"><Truck className="h-5 w-5 text-primary" /> Shipping Address</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <Input label="Full Name *" name="fullName" value={address.fullName} onChange={handleAddressChange} required />
-                                <Input label="Phone Number *" name="phone" value={address.phone} onChange={handleAddressChange} required />
-                                <div className="sm:col-span-2">
-                                    <Input label="Address Line 1 *" name="addressLine1" value={address.addressLine1} onChange={handleAddressChange} required />
-                                </div>
-                                <div className="sm:col-span-2">
-                                    <Input label="Address Line 2" name="addressLine2" value={address.addressLine2} onChange={handleAddressChange} />
-                                </div>
-                                <Input label="City *" name="city" value={address.city} onChange={handleAddressChange} required />
-                                <div>
-                                    <label className="block text-sm font-medium mb-1.5">State *</label>
-                                    <select name="state" value={address.state} onChange={handleAddressChange} className="w-full rounded-lg border border-border bg-white p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20" required>
-                                        <option value="">Select State</option>
-                                        {INDIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-                                    </select>
-                                </div>
-                                <Input label="Pincode *" name="pincode" value={address.pincode} onChange={handleAddressChange} required />
+                            <div className="flex justify-between items-center">
+                                <h3 className="font-semibold text-lg flex items-center gap-2"><Truck className="h-5 w-5 text-primary" /> Shipping Address</h3>
+                                {savedAddresses.length > 0 && (
+                                    <Button variant="ghost" size="sm" onClick={() => setUseNewAddress(!useNewAddress)}>
+                                        {useNewAddress ? "Use Saved Address" : "+ New Address"}
+                                    </Button>
+                                )}
                             </div>
+
+                            {!useNewAddress && savedAddresses.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {savedAddresses.map(addr => {
+                                        const isSelected = address.fullName === addr.fullName && address.addressLine1 === addr.addressLine1;
+                                        return (
+                                            <div 
+                                                key={addr.id} 
+                                                className={`p-4 rounded-xl border-2 cursor-pointer transition-colors ${isSelected ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-primary/50'}`}
+                                                onClick={() => handleSelectAddress(addr)}
+                                            >
+                                                <div className="flex justify-between">
+                                                    <span className="text-xs font-bold uppercase bg-gray-100 px-2 py-0.5 rounded">{addr.label}</span>
+                                                </div>
+                                                <p className="font-bold text-sm mt-2">{addr.fullName}</p>
+                                                <p className="text-sm text-gray-600 line-clamp-1">{addr.addressLine1}</p>
+                                                <p className="text-sm text-gray-600">{addr.city}, {addr.state} {addr.pincode}</p>
+                                                <p className="text-xs mt-1 text-gray-500">Phone: {addr.phone}</p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Input label="Full Name *" name="fullName" value={address.fullName} onChange={handleAddressChange} required />
+                                    <Input label="Phone Number *" name="phone" value={address.phone} onChange={handleAddressChange} required />
+                                    <div className="sm:col-span-2">
+                                        <Input label="Address Line 1 *" name="addressLine1" value={address.addressLine1} onChange={handleAddressChange} required />
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <Input label="Address Line 2" name="addressLine2" value={address.addressLine2} onChange={handleAddressChange} />
+                                    </div>
+                                    <Input label="City *" name="city" value={address.city} onChange={handleAddressChange} required />
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1.5">State *</label>
+                                        <select name="state" value={address.state} onChange={handleAddressChange} className="w-full rounded-lg border border-border bg-white p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20" required>
+                                            <option value="">Select State</option>
+                                            {INDIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+                                    <Input label="Pincode *" name="pincode" value={address.pincode} onChange={handleAddressChange} required />
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 

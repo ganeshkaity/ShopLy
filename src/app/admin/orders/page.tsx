@@ -11,12 +11,13 @@ import { Spinner } from "@/components/ui/Spinner";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/context/ToastContext";
 import { ORDER_STATUS_FLOW, ORDER_STATUS_COLORS } from "@/constants";
-import { ShoppingCart, ChevronDown, ChevronUp } from "lucide-react";
+import { ShoppingCart, ChevronDown, ChevronUp, Download, Package } from "lucide-react";
 
 export default function AdminOrdersPage() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+    const [downloadingId, setDownloadingId] = useState<string | null>(null);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -37,6 +38,36 @@ export default function AdminOrdersPage() {
             toast(`Order updated to ${newStatus}`, "success");
         } catch (error) {
             toast("Failed to update status", "error");
+        }
+    };
+
+    const handleDownloadInvoice = async (order: Order) => {
+        setDownloadingId(`invoice-${order.id}`);
+        try {
+            const { getSettings } = await import("@/services/settings.service");
+            const { generateInvoice } = await import("@/lib/invoice");
+            const settings = await getSettings();
+            // generateInvoice handles saving internally
+            await generateInvoice(order as any, settings as any);
+        } catch (error) {
+            toast("Failed to download invoice", "error");
+        } finally {
+            setDownloadingId(null);
+        }
+    };
+
+    const handleDownloadSlip = async (order: Order) => {
+        setDownloadingId(`slip-${order.id}`);
+        try {
+            const { getSettings } = await import("@/services/settings.service");
+            const { generateShippingSlip } = await import("@/utils/pdfGenerator");
+            const settings = await getSettings();
+            const doc = await generateShippingSlip(order, settings?.appName || "ShopLy", settings);
+            doc.save(`ShippingSlip_${order.id}.pdf`);
+        } catch (error) {
+            toast("Failed to download shipping slip", "error");
+        } finally {
+            setDownloadingId(null);
         }
     };
 
@@ -118,6 +149,27 @@ export default function AdminOrdersPage() {
                                                         </Button>
                                                     ))}
                                                 </div>
+                                            </div>
+
+                                            <div className="flex gap-2 flex-wrap">
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    onClick={() => handleDownloadInvoice(order)}
+                                                    disabled={downloadingId === `invoice-${order.id}`}
+                                                >
+                                                    {downloadingId === `invoice-${order.id}` ? <Spinner size="sm" className="mr-2 border-t-primary" /> : <Download className="w-4 h-4 mr-2" />}
+                                                    Download Invoice
+                                                </Button>
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    onClick={() => handleDownloadSlip(order)}
+                                                    disabled={downloadingId === `slip-${order.id}`}
+                                                >
+                                                    {downloadingId === `slip-${order.id}` ? <Spinner size="sm" className="mr-2 border-t-primary" /> : <Package className="w-4 h-4 mr-2" />}
+                                                    Shipping Slip
+                                                </Button>
                                             </div>
 
                                             {order.paymentId && <p className="text-xs text-muted-foreground">Payment ID: {order.paymentId}</p>}

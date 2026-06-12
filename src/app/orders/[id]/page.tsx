@@ -25,7 +25,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             const { getSettings } = await import("@/services/settings.service");
             const { generateInvoice } = await import("@/lib/invoice");
             const settings = await getSettings();
-            await generateInvoice(order, settings);
+            // generateInvoice handles saving internally
+            await generateInvoice(order as any, settings as any);
         } catch (error) {
             console.error("Failed to download invoice:", error);
         } finally {
@@ -246,15 +247,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         </CardContent>
                     </Card>
 
-                    {/* Download Invoice Button */}
                     <button
-                        onClick={handleDownloadInvoice}
-                        disabled={isDownloading}
-                        className="w-full flex items-center justify-center gap-2 bg-white border border-border text-foreground hover:bg-gray-50 py-3 px-4 rounded-xl font-medium transition-all shadow-sm disabled:opacity-70"
-                    >
-                        {isDownloading ? <Spinner size="sm" className="border-t-primary" /> : <Download className="h-4 w-4" />}
-                        {isDownloading ? "Generating..." : "Download Invoice"}
-                    </button>
+                            onClick={handleDownloadInvoice}
+                            disabled={isDownloading}
+                            className="w-full flex items-center justify-center gap-2 bg-white border border-border text-foreground hover:bg-gray-50 py-3 px-4 rounded-xl font-medium transition-all shadow-sm disabled:opacity-70"
+                        >
+                            {isDownloading ? <Spinner size="sm" className="border-t-primary" /> : <Download className="h-4 w-4" />}
+                            {isDownloading ? "Generating Invoice..." : "Download Invoice"}
+                        </button>
 
                     {/* Shipping Address */}
                     <Card>

@@ -27,7 +27,10 @@ import {
     Ticket,
     Trash2,
     Lock,
-    Link as LinkIcon
+    Link as LinkIcon,
+    PlusCircle,
+    Home,
+    Briefcase
 } from "lucide-react";
 import Link from "next/link";
 import { Spinner } from "@/components/ui/Spinner";
@@ -38,10 +41,13 @@ import {
     compressImageToBase64,
     createSupportTicket,
     createDeletionRequest,
-    UserData
+    UserData,
+    Address,
+    AddressLabel,
+    saveUserAddresses
 } from "@/services/user.service";
 
-type ViewState = "overview" | "edit" | "security";
+type ViewState = "overview" | "edit" | "security" | "addresses";
 
 export default function AccountPage() {
     const { user, isAdmin, loading: authLoading, logout, linkGoogleAccount, addPasswordToUser } = useAuth();
@@ -67,6 +73,19 @@ export default function AccountPage() {
 
     const [newPassword, setNewPassword] = useState("");
     const [isAddingPassword, setIsAddingPassword] = useState(false);
+
+    // Addresses states
+    const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+    const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+    const [addrLabel, setAddrLabel] = useState<AddressLabel>("Home");
+    const [addrFullName, setAddrFullName] = useState("");
+    const [addrPhone, setAddrPhone] = useState("");
+    const [addrLine1, setAddrLine1] = useState("");
+    const [addrLine2, setAddrLine2] = useState("");
+    const [addrCity, setAddrCity] = useState("");
+    const [addrState, setAddrState] = useState("");
+    const [addrPincode, setAddrPincode] = useState("");
+    const [addrIsDefault, setAddrIsDefault] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -199,6 +218,96 @@ export default function AccountPage() {
         }
     };
 
+    const handleSaveAddress = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user || !userData) return;
+
+        const currentAddresses = userData.addresses || [];
+        const newAddress: Address = {
+            id: editingAddress?.id || Date.now().toString(),
+            label: addrLabel,
+            fullName: addrFullName,
+            phone: addrPhone,
+            addressLine1: addrLine1,
+            addressLine2: addrLine2,
+            city: addrCity,
+            state: addrState,
+            pincode: addrPincode,
+            isDefault: addrIsDefault
+        };
+
+        let updatedAddresses = [...currentAddresses];
+        if (editingAddress) {
+            updatedAddresses = updatedAddresses.map(a => a.id === editingAddress.id ? newAddress : a);
+        } else {
+            updatedAddresses.push(newAddress);
+        }
+
+        try {
+            await saveUserAddresses(user.uid, updatedAddresses);
+            setUserData({ ...userData, addresses: updatedAddresses });
+            toast(`Address ${editingAddress ? 'updated' : 'added'} successfully`, "success");
+            setIsAddressModalOpen(false);
+            setEditingAddress(null);
+        } catch (error) {
+            toast("Failed to save address", "error");
+        }
+    };
+
+    const handleDeleteAddress = async (id: string) => {
+        if (!user || !userData) return;
+        const updated = (userData.addresses || []).filter(a => a.id !== id);
+        try {
+            await saveUserAddresses(user.uid, updated);
+            setUserData({ ...userData, addresses: updated });
+            toast("Address deleted", "success");
+        } catch (error) {
+            toast("Failed to delete address", "error");
+        }
+    };
+
+    const handleSetDefaultAddress = async (id: string) => {
+        if (!user || !userData) return;
+        const updated = (userData.addresses || []).map(a => ({
+            ...a,
+            isDefault: a.id === id
+        }));
+        try {
+            await saveUserAddresses(user.uid, updated);
+            setUserData({ ...userData, addresses: updated });
+            toast("Default address updated", "success");
+        } catch (error) {
+            toast("Failed to set default address", "error");
+        }
+    };
+
+    const openAddressModal = (addr?: Address) => {
+        if (addr) {
+            setEditingAddress(addr);
+            setAddrLabel(addr.label);
+            setAddrFullName(addr.fullName);
+            setAddrPhone(addr.phone);
+            setAddrLine1(addr.addressLine1);
+            setAddrLine2(addr.addressLine2 || "");
+            setAddrCity(addr.city);
+            setAddrState(addr.state);
+            setAddrPincode(addr.pincode);
+            setAddrIsDefault(addr.isDefault);
+        } else {
+            setEditingAddress(null);
+            setAddrLabel("Home");
+            setAddrFullName("");
+            setAddrPhone("");
+            setAddrLine1("");
+            setAddrLine2("");
+            setAddrCity("");
+            setAddrState("");
+            setAddrPincode("");
+            setAddrIsDefault((userData?.addresses || []).length === 0); // first is default
+        }
+        setIsAddressModalOpen(true);
+    };
+
     if (authLoading || !user) {
         return (
             <div className="flex justify-center items-center min-h-[60vh]">
@@ -206,6 +315,9 @@ export default function AccountPage() {
             </div>
         );
     }
+
+    const hasPassword = auth.currentUser?.providerData.some(p => p.providerId === "password") || false;
+    const hasGoogle = auth.currentUser?.providerData.some(p => p.providerId === "google.com") || false;
 
     const avatarUrl = userData?.avatarBase64 || user.photoURL;
 
@@ -290,7 +402,7 @@ export default function AccountPage() {
                                     <MenuButton
                                         icon={<MapPin className="h-5 w-5" />}
                                         label="Shipping Address"
-                                        onClick={() => toast("Address management coming soon!", "info")}
+                                        onClick={() => setView("addresses")}
                                     />
                                     <MenuButton
                                         icon={<Shield className="h-5 w-5" />}
@@ -412,12 +524,29 @@ export default function AccountPage() {
                                     </div>
                                     
                                     <div className="space-y-4">
-                                        <Button variant="outline" onClick={handleLinkGoogle} className="w-full h-12 rounded-xl border-gray-200">
-                                            <LinkIcon className="w-4 h-4 mr-2" /> Link with Google Account
-                                        </Button>
+                                        <div className="flex gap-4">
+                                            {hasGoogle && (
+                                                <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl">
+                                                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                                                    <span className="text-sm font-medium">Google Linked</span>
+                                                </div>
+                                            )}
+                                            {hasPassword && (
+                                                <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl">
+                                                    <Mail className="w-5 h-5 text-gray-600" />
+                                                    <span className="text-sm font-medium">Email/Password</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {!hasGoogle && (
+                                            <Button variant="outline" onClick={handleLinkGoogle} className="w-full h-12 rounded-xl border-gray-200 mt-2">
+                                                <LinkIcon className="w-4 h-4 mr-2" /> Link with Google Account
+                                            </Button>
+                                        )}
                                         
                                         <form onSubmit={handleAddPassword} className="space-y-3 pt-4 border-t border-gray-50">
-                                            <h3 className="text-sm font-bold">Add Password (If using Google Login)</h3>
+                                            <h3 className="text-sm font-bold">{hasPassword ? "Change Password" : "Add Password (If using Google Login)"}</h3>
                                             <div className="flex gap-2">
                                                 <Input 
                                                     type="password" 
@@ -428,7 +557,7 @@ export default function AccountPage() {
                                                     className="h-12 rounded-xl"
                                                 />
                                                 <Button type="submit" disabled={isAddingPassword} className="h-12 rounded-xl px-6">
-                                                    {isAddingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : "Set"}
+                                                    {isAddingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : (hasPassword ? "Update" : "Set")}
                                                 </Button>
                                             </div>
                                         </form>
@@ -494,6 +623,131 @@ export default function AccountPage() {
                                         </Button>
                                     </form>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {view === "addresses" && (
+                        <div className="max-w-3xl mx-auto space-y-8">
+                            <div className="flex items-center justify-between pb-2 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="bg-gray-50 shadow-sm border border-gray-100 rounded-xl"
+                                    onClick={() => setView("overview")}
+                                >
+                                    <ArrowLeft className="h-5 w-5 text-gray-600" />
+                                </Button>
+                                <h1 className="text-xl font-bold text-gray-900">Shipping Addresses</h1>
+                                <div className="w-10" />
+                            </div>
+
+                            <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-100 space-y-6">
+                                <div className="flex justify-between items-center border-b border-gray-50 pb-4">
+                                    <h2 className="text-lg font-bold">Saved Addresses</h2>
+                                    <Button onClick={() => openAddressModal()} className="rounded-xl">
+                                        <PlusCircle className="w-4 h-4 mr-2" /> Add New Address
+                                    </Button>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {(userData?.addresses || []).length === 0 ? (
+                                        <p className="text-gray-500 text-sm col-span-full py-4 text-center">No addresses saved yet.</p>
+                                    ) : (
+                                        (userData?.addresses || []).map((addr) => (
+                                            <div key={addr.id} className={`p-4 rounded-2xl border ${addr.isDefault ? 'border-primary bg-primary/5' : 'border-gray-200'} relative group`}>
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-bold uppercase px-2 py-0.5 rounded bg-gray-100 text-gray-700 flex items-center gap-1">
+                                                            {addr.label === "Home" ? <Home className="w-3 h-3" /> : (addr.label === "Office" || addr.label === "Work" ? <Briefcase className="w-3 h-3" /> : <MapPin className="w-3 h-3" />)}
+                                                            {addr.label}
+                                                        </span>
+                                                        {addr.isDefault && (
+                                                            <span className="text-xs font-bold uppercase px-2 py-0.5 rounded bg-primary text-white">Default</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <p className="font-bold text-gray-900 text-sm">{addr.fullName}</p>
+                                                <p className="text-sm text-gray-600 mt-1">{addr.addressLine1}</p>
+                                                {addr.addressLine2 && <p className="text-sm text-gray-600">{addr.addressLine2}</p>}
+                                                <p className="text-sm text-gray-600">{addr.city}, {addr.state} {addr.pincode}</p>
+                                                <p className="text-sm font-medium text-gray-800 mt-1">Phone: {addr.phone}</p>
+
+                                                <div className="mt-4 flex gap-2">
+                                                    {!addr.isDefault && (
+                                                        <Button variant="outline" size="sm" onClick={() => handleSetDefaultAddress(addr.id)} className="flex-1 h-8 text-xs rounded-lg">Set Default</Button>
+                                                    )}
+                                                    <Button variant="outline" size="sm" onClick={() => openAddressModal(addr)} className="flex-1 h-8 text-xs rounded-lg">Edit</Button>
+                                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteAddress(addr.id)} className="h-8 w-8 text-red-500 hover:bg-red-50 rounded-lg">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {isAddressModalOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+                            <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-xl font-bold">{editingAddress ? 'Edit Address' : 'Add New Address'}</h2>
+                                    <Button variant="ghost" size="icon" onClick={() => setIsAddressModalOpen(false)} className="rounded-full">
+                                        <Trash2 className="h-5 w-5 text-gray-400 rotate-45" /> {/* Use rotate-45 for X or import X icon */}
+                                    </Button>
+                                </div>
+
+                                <form onSubmit={handleSaveAddress} className="space-y-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-sm font-medium">Save As</label>
+                                        <div className="flex gap-2">
+                                            {["Home", "Office", "Work", "Other"].map(lbl => (
+                                                <button
+                                                    key={lbl}
+                                                    type="button"
+                                                    onClick={() => setAddrLabel(lbl as AddressLabel)}
+                                                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${addrLabel === lbl ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                                >
+                                                    {lbl}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Input label="Full Name" value={addrFullName} onChange={e => setAddrFullName(e.target.value)} required />
+                                        <Input label="Phone Number" value={addrPhone} onChange={e => setAddrPhone(e.target.value)} required />
+                                    </div>
+                                    <Input label="Address Line 1" value={addrLine1} onChange={e => setAddrLine1(e.target.value)} required />
+                                    <Input label="Address Line 2 (Optional)" value={addrLine2} onChange={e => setAddrLine2(e.target.value)} />
+                                    
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Input label="City" value={addrCity} onChange={e => setAddrCity(e.target.value)} required />
+                                        <Input label="State" value={addrState} onChange={e => setAddrState(e.target.value)} required />
+                                    </div>
+                                    <Input label="Pincode" value={addrPincode} onChange={e => setAddrPincode(e.target.value)} required />
+
+                                    {!addrIsDefault && (
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <input 
+                                                type="checkbox" 
+                                                id="isDefault" 
+                                                checked={addrIsDefault}
+                                                onChange={e => setAddrIsDefault(e.target.checked)}
+                                                className="w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="isDefault" className="text-sm font-medium text-gray-700">Make this my default address</label>
+                                        </div>
+                                    )}
+
+                                    <div className="pt-4 flex gap-4">
+                                        <Button type="button" variant="outline" className="flex-1 rounded-xl h-12" onClick={() => setIsAddressModalOpen(false)}>Cancel</Button>
+                                        <Button type="submit" className="flex-1 rounded-xl h-12">Save Address</Button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     )}
