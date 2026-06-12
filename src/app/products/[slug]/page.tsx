@@ -31,6 +31,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { ProductImageGallery } from "@/components/products/ProductImageGallery";
 import { ProductDetailsSkeleton } from "@/components/products/ProductDetailsSkeleton";
 import { ProductRow } from "@/components/products/ProductRow";
+import { ProductReviews } from "@/components/products/ProductReviews";
 import { useToast } from "@/context/ToastContext";
 import { useCart } from "@/hooks/useCart";
 import ReactMarkdown from 'react-markdown';
@@ -507,6 +508,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                     })()}
                 </div>
             </div>
+
+            {/* Product Reviews */}
+            <ProductReviews productId={product.id} />
 
             {/* Sticky Bottom Bar (Mobile/Tablet optimized) */}
             <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-border p-4 lg:hidden animate-in fade-in slide-in-from-bottom duration-500 shadow-[0_-8px_30px_rgb(0,0,0,0.04)]">

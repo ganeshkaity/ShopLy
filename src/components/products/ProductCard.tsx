@@ -77,10 +77,14 @@ export function ProductCard({ product, className }: ProductCardProps) {
     // Dummy rating for preview if not provided in product type
     const rating = 4.7;
 
+    const isRedirection = product.type === 'REDIRECTION';
+    const productHref = isRedirection ? (product.targetUrl || '#') : `/products/${product.slug}`;
+    const linkProps = isRedirection ? { target: "_blank", rel: "noopener noreferrer" } : {};
+
     return (
         <Card hover className={cn("group flex flex-col h-full overflow-visible relative", className)}>
             <div className="relative aspect-square overflow-hidden bg-white">
-                <Link href={`/products/${product.slug}`} className="block h-full w-full p-0">
+                <Link href={productHref} {...linkProps} className="block h-full w-full p-0">
                     {product.images?.[0] ? (
                         <Image
                             src={product.images[0]}
@@ -171,7 +175,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
                 <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
                     {product.category}
                 </p>
-                <Link href={`/products/${product.slug}`} className="hover:text-primary transition-colors">
+                <Link href={productHref} {...linkProps} className="hover:text-primary transition-colors">
                     <h3 className="text-sm font-medium line-clamp-1">
                         {product.name}
                     </h3>

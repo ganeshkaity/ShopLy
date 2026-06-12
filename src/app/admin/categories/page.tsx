@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -9,7 +9,7 @@ import { useToast } from "@/context/ToastContext";
 import { getCategories, createCategory, updateCategory, deleteCategory, uploadCategoryImage } from "@/services/category.service";
 import { compressImage } from "@/lib/image-utils";
 import { Category } from "@/types";
-import { Loader2, Plus, Trash2, Edit2, ImageIcon, Power, CheckCircle2, MessageSquare } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit2, ImageIcon, Power, CheckCircle2, MessageSquare, GripVertical, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function AdminCategoriesPage() {
@@ -20,6 +20,13 @@ export default function AdminCategoriesPage() {
     const [editingCategory, setEditingCategory] = useState<Partial<Category> | null>(null);
     const [uploadStatus, setUploadStatus] = useState<{ stage: 'compressing' | 'uploading' | 'done' } | null>(null);
     const [saving, setSaving] = useState(false);
+
+    // Reorder state
+    const [isReordering, setIsReordering] = useState(false);
+    const [orderChanged, setOrderChanged] = useState(false);
+    const [savingOrder, setSavingOrder] = useState(false);
+    const dragItem = useRef<number | null>(null);
+    const dragOverItem = useRef<number | null>(null);
 
     useEffect(() => {
         fetchCategories();
@@ -47,6 +54,7 @@ export default function AdminCategoriesPage() {
             name: "",
             backgroundImage: "",
             isActive: true,
+            order: categories.length
         });
         setIsEditing(true);
     };
@@ -122,6 +130,55 @@ export default function AdminCategoriesPage() {
         }
     };
 
+    // Drag and Drop Handlers
+    const handleDragStart = (e: React.DragEvent<HTMLDivElement>, position: number) => {
+        dragItem.current = position;
+        // e.dataTransfer.effectAllowed = "move"; // Optional
+    };
+
+    const handleDragEnter = (e: React.DragEvent<HTMLDivElement>, position: number) => {
+        dragOverItem.current = position;
+    };
+
+    const handleDragEnd = () => {
+        if (dragItem.current !== null && dragOverItem.current !== null) {
+            const _categories = [...categories];
+            const dragItemContent = _categories[dragItem.current];
+            _categories.splice(dragItem.current, 1);
+            _categories.splice(dragOverItem.current, 0, dragItemContent);
+            setCategories(_categories);
+            setOrderChanged(true);
+        }
+        dragItem.current = null;
+        dragOverItem.current = null;
+    };
+
+    const handleSaveOrder = async () => {
+        setSavingOrder(true);
+        try {
+            // Batch process or individual updates
+            const promises = categories.map((cat, index) => 
+                updateCategory(cat.id, { order: index })
+            );
+            await Promise.all(promises);
+            toast("Category order saved successfully!", "success");
+            setOrderChanged(false);
+            setIsReordering(false);
+        } catch (error) {
+            console.error(error);
+            toast("Failed to save new order", "error");
+        } finally {
+            setSavingOrder(false);
+            fetchCategories();
+        }
+    };
+
+    const handleCancelReorder = () => {
+        setIsReordering(false);
+        setOrderChanged(false);
+        fetchCategories(); // Reset to original order
+    };
+
     if (loading) {
         return (
             <div className="flex h-[60vh] items-center justify-center">
@@ -132,15 +189,34 @@ export default function AdminCategoriesPage() {
 
     return (
         <div className="space-y-6 max-w-5xl mx-auto">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="font-serif text-3xl font-bold">Categories Management</h1>
                     <p className="text-muted-foreground mt-1">Manage product categories and their showcase visuals.</p>
                 </div>
-                {!isEditing && (
-                    <Button onClick={handleAddNew} className="rounded-full px-6">
-                        <Plus className="h-4 w-4 mr-2" /> Add New Category
-                    </Button>
+                {!isEditing && categories.length > 0 && (
+                    <div className="flex gap-2">
+                        {isReordering ? (
+                            <>
+                                <Button variant="outline" onClick={handleCancelReorder} disabled={savingOrder}>
+                                    Cancel
+                                </Button>
+                                <Button onClick={handleSaveOrder} disabled={!orderChanged || savingOrder} className="rounded-full">
+                                    {savingOrder ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />} 
+                                    Save Order
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <Button variant="outline" onClick={() => setIsReordering(true)} className="rounded-full">
+                                    <GripVertical className="h-4 w-4 mr-2" /> Reorder
+                                </Button>
+                                <Button onClick={handleAddNew} className="rounded-full px-6">
+                                    <Plus className="h-4 w-4 mr-2" /> Add New
+                                </Button>
+                            </>
+                        )}
+                    </div>
                 )}
             </div>
 
@@ -241,31 +317,59 @@ export default function AdminCategoriesPage() {
                 </Card>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {categories.map((category) => (
-                        <Card key={category.id} className="overflow-hidden group hover:shadow-2xl transition-all duration-300 border-none bg-white">
-                            <div className="aspect-video relative">
-                                <img src={category.backgroundImage} alt={category.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6">
-                                    <h3 className="text-white font-bold text-xl leading-tight truncate">
-                                        {category.name}
-                                    </h3>
+                    {categories.map((category, index) => (
+                        <div
+                            key={category.id}
+                            draggable={isReordering}
+                            onDragStart={(e) => handleDragStart(e, index)}
+                            onDragEnter={(e) => handleDragEnter(e, index)}
+                            onDragEnd={handleDragEnd}
+                            className={cn(
+                                "transition-all duration-300",
+                                isReordering ? "cursor-move hover:scale-[1.02]" : ""
+                            )}
+                        >
+                            <Card className={cn(
+                                "overflow-hidden group transition-all duration-300 border-none bg-white",
+                                isReordering ? "shadow-md ring-2 ring-transparent hover:ring-primary/50" : "hover:shadow-2xl"
+                            )}>
+                                <div className="aspect-video relative">
+                                    {isReordering && (
+                                        <div className="absolute top-3 left-3 z-30 bg-black/50 backdrop-blur-md rounded-lg p-2 text-white cursor-grab active:cursor-grabbing">
+                                            <GripVertical className="h-5 w-5" />
+                                        </div>
+                                    )}
+                                    <img src={category.backgroundImage} alt={category.name} className={cn(
+                                        "w-full h-full object-cover transition-transform duration-500",
+                                        !isReordering && "group-hover:scale-110"
+                                    )} />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6">
+                                        <div className="flex items-center gap-2">
+                                            {isReordering && <span className="bg-white text-black font-bold h-6 w-6 rounded-full flex items-center justify-center text-xs">{index + 1}</span>}
+                                            <h3 className="text-white font-bold text-xl leading-tight truncate">
+                                                {category.name}
+                                            </h3>
+                                        </div>
 
-                                    <div className="flex items-center gap-3 mt-4">
-                                        <Button size="sm" variant="secondary" className="bg-white/10 border-white/20 backdrop-blur-md text-white hover:bg-white hover:text-primary rounded-full" onClick={() => handleEdit(category)}>
-                                            <Edit2 className="h-3.5 w-3.5 mr-1.5" /> Edit
-                                        </Button>
-                                        <Button size="sm" variant="secondary" className="bg-red-500/10 border-red-500/20 backdrop-blur-md text-red-500 hover:bg-red-500 hover:text-white rounded-full" onClick={() => handleDelete(category.id)}>
-                                            <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete
-                                        </Button>
+                                        {!isReordering && (
+                                            <div className="flex items-center gap-3 mt-4">
+                                                <Button size="sm" variant="secondary" className="bg-white/10 border-white/20 backdrop-blur-md text-white hover:bg-white hover:text-primary rounded-full" onClick={() => handleEdit(category)}>
+                                                    <Edit2 className="h-3.5 w-3.5 mr-1.5" /> Edit
+                                                </Button>
+                                                <Button size="sm" variant="secondary" className="bg-red-500/10 border-red-500/20 backdrop-blur-md text-red-500 hover:bg-red-500 hover:text-white rounded-full" onClick={() => handleDelete(category.id)}>
+                                                    <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="absolute top-4 right-4 flex flex-col gap-2 scale-90 origin-top-right z-20">
+                                        <Badge className={cn("rounded-full border-none shadow-lg", category.isActive ? "bg-green-500/90" : "bg-red-500/90")}>
+                                            {category.isActive ? "Live" : "Inactive"}
+                                        </Badge>
                                     </div>
                                 </div>
-                                <div className="absolute top-4 right-4 flex flex-col gap-2 scale-90 origin-top-right">
-                                    <Badge className={cn("rounded-full border-none shadow-lg", category.isActive ? "bg-green-500/90" : "bg-red-500/90")}>
-                                        {category.isActive ? "Live" : "Inactive"}
-                                    </Badge>
-                                </div>
-                            </div>
-                        </Card>
+                            </Card>
+                        </div>
                     ))}
 
                     {categories.length === 0 && (

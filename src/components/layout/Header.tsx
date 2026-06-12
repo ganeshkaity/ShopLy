@@ -15,7 +15,9 @@ import {
     History,
     UserCircle,
     Mic,
-    Bell
+    Bell,
+    ArrowLeft,
+    MapPin
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/Button";
@@ -25,11 +27,12 @@ import { useToast } from "@/context/ToastContext";
 import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
 import { getNotifications, GlobalNotification } from "@/services/notification.service";
+import { getUserData, UserData } from "@/services/user.service";
 
 const NAV_LINKS = [
     { name: "Home", href: "/" },
     { name: "Products", href: "/products" },
-    { name: "About", href: "/about" },
+    { name: "T-Shirt Print", href: "/tshirt-printing" },
 ];
 
 export function Header() {
@@ -45,6 +48,11 @@ export function Header() {
     const [isNotifOpen, setIsNotifOpen] = React.useState(false);
     const [notifications, setNotifications] = React.useState<GlobalNotification[]>([]);
     const [unreadCount, setUnreadCount] = React.useState(0);
+    const [selectedNotif, setSelectedNotif] = React.useState<GlobalNotification | null>(null);
+    const [userData, setUserData] = React.useState<UserData | null>(null);
+
+    const notifRef = React.useRef<HTMLDivElement>(null);
+    const userMenuRef = React.useRef<HTMLDivElement>(null);
 
     const [barStyles, setBarStyles] = React.useState<{ duration: number; delay: number }[]>([]);
 
@@ -72,18 +80,45 @@ export function Header() {
                 const unread = data.filter(n => !readIds.includes(n.id)).length;
                 setUnreadCount(unread);
             }).catch(console.error);
+
+            getUserData(user.uid).then(data => {
+                if (data) setUserData(data);
+            }).catch(console.error);
         }
     }, [user]);
+
+    // Handle clicks outside of modals
+    React.useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (isNotifOpen && notifRef.current && !notifRef.current.contains(event.target as Node)) {
+                setIsNotifOpen(false);
+            }
+            if (isUserMenuOpen && userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+                setIsUserMenuOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [isNotifOpen, isUserMenuOpen]);
 
     const handleOpenNotifs = () => {
         setIsNotifOpen(!isNotifOpen);
         setIsUserMenuOpen(false);
+        setSelectedNotif(null);
         if (!isNotifOpen && user) {
             // Mark all as read when opening
             setUnreadCount(0);
             const allIds = notifications.map(n => n.id);
             localStorage.setItem(`read_notifs_${user.uid}`, JSON.stringify(allIds));
         }
+    };
+
+    const getTagColor = (tag: string) => {
+        const t = tag.toLowerCase();
+        if (t === "important") return "bg-red-100 text-red-600";
+        if (t === "sale" || t === "offer") return "bg-green-100 text-green-600";
+        if (t === "update") return "bg-blue-100 text-blue-600";
+        return "bg-primary/10 text-primary";
     };
 
     // Handle sidebar animation lifecycle
@@ -176,6 +211,7 @@ export function Header() {
 
                     {/* Logo */}
                     <Link href="/" className="flex items-center gap-2">
+                        <img src="/paper.png" alt="Paper Petals" className="w-8 h-8 object-contain hidden md:block" />
                         <span className="font-serif text-2xl font-bold tracking-tight text-primary">
                             {APP_NAME}
                         </span>
@@ -276,7 +312,7 @@ export function Header() {
                             </Button>
                         )}
                         
-                        <div className="relative">
+                        <div className="relative" ref={notifRef}>
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
@@ -292,20 +328,48 @@ export function Header() {
                             {isNotifOpen && (
                                 <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-border bg-white p-2 shadow-2xl animate-in fade-in zoom-in duration-200 z-50">
                                     <div className="px-3 py-3 border-b border-border flex justify-between items-center">
-                                        <h3 className="font-bold text-sm">Notifications</h3>
+                                        <div className="flex items-center gap-2">
+                                            {selectedNotif && (
+                                                <button onClick={() => setSelectedNotif(null)} className="hover:bg-gray-100 p-1 rounded-md transition-colors">
+                                                    <ArrowLeft className="w-4 h-4 text-gray-600" />
+                                                </button>
+                                            )}
+                                            <h3 className="font-bold text-sm">Notifications</h3>
+                                        </div>
                                     </div>
                                     <div className="max-h-[300px] overflow-y-auto p-1 space-y-1">
                                         {notifications.length === 0 ? (
                                             <p className="text-sm text-center text-gray-500 py-6">No notifications yet</p>
+                                        ) : selectedNotif ? (
+                                            <div className="p-3 animate-in slide-in-from-right-4 duration-200">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <span className={cn("text-[10px] font-bold uppercase px-2 py-0.5 rounded", getTagColor(selectedNotif.tag))}>
+                                                        {selectedNotif.tag}
+                                                    </span>
+                                                    <span className="text-[10px] text-gray-400">
+                                                        {selectedNotif.createdAt?.toDate ? selectedNotif.createdAt.toDate().toLocaleDateString() : ""}
+                                                    </span>
+                                                </div>
+                                                <h4 className="text-sm font-bold text-gray-900 mb-2">{selectedNotif.title}</h4>
+                                                <p className="text-sm text-gray-600 whitespace-pre-wrap">{selectedNotif.message}</p>
+                                            </div>
                                         ) : (
                                             notifications.map(n => (
-                                                <div key={n.id} className="p-3 rounded-xl hover:bg-gray-50 transition-colors space-y-1 border border-transparent hover:border-gray-100">
-                                                    <div className="flex justify-between items-start">
-                                                        <span className="text-[10px] font-bold uppercase text-primary px-1.5 py-0.5 bg-primary/10 rounded">{n.tag}</span>
-                                                        <span className="text-[10px] text-gray-400">{n.createdAt?.toDate ? n.createdAt.toDate().toLocaleDateString() : ""}</span>
+                                                <div 
+                                                    key={n.id} 
+                                                    onClick={() => setSelectedNotif(n)}
+                                                    className="p-3 rounded-xl hover:bg-gray-50 transition-colors space-y-1 border border-transparent hover:border-gray-100 cursor-pointer"
+                                                >
+                                                    <div className="flex justify-between items-start mb-1">
+                                                        <span className={cn("text-[10px] font-bold uppercase px-1.5 py-0.5 rounded", getTagColor(n.tag))}>
+                                                            {n.tag}
+                                                        </span>
+                                                        <span className="text-[10px] text-gray-400">
+                                                            {n.createdAt?.toDate ? n.createdAt.toDate().toLocaleDateString() : ""}
+                                                        </span>
                                                     </div>
-                                                    <p className="text-sm font-bold text-gray-900">{n.title}</p>
-                                                    <p className="text-xs text-gray-500">{n.message}</p>
+                                                    <p className="text-sm font-bold text-gray-900 line-clamp-1">{n.title}</p>
+                                                    <p className="text-xs text-gray-500 line-clamp-1">{n.message}</p>
                                                 </div>
                                             ))
                                         )}
@@ -337,17 +401,22 @@ export function Header() {
                         </Link>
 
                         {user ? (
-                            <div className="relative">
+                            <div className="relative" ref={userMenuRef}>
                                 <Button
                                     variant="ghost"
-                                    size="icon"
-                                    className="rounded-full border border-primary/20 bg-primary/5"
+                                    className="h-8 w-8 rounded-full border-2 border-primary/30 bg-primary/5 p-0 overflow-hidden"
                                     onClick={() => {
                                         setIsUserMenuOpen(!isUserMenuOpen);
                                         setIsNotifOpen(false);
                                     }}
                                 >
-                                    <UserCircle className="h-6 w-6 text-primary" />
+                                    {userData?.avatarBase64 ? (
+                                        <img src={userData.avatarBase64} alt="Avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-white flex items-center justify-center">
+                                            <img src="/paper.png" alt="Default Avatar" className="w-5 h-5 object-contain" />
+                                        </div>
+                                    )}
                                 </Button>
 
                                 {isUserMenuOpen && (
@@ -363,6 +432,13 @@ export function Header() {
                                             onClick={() => setIsUserMenuOpen(false)}
                                         >
                                             <History className="h-4 w-4" /> Order History
+                                        </Link>
+                                        <Link
+                                            href="/track-order"
+                                            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-accent transition-colors"
+                                            onClick={() => setIsUserMenuOpen(false)}
+                                        >
+                                            <MapPin className="h-4 w-4" /> Track Order
                                         </Link>
                                         <Link
                                             href="/account"

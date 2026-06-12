@@ -205,3 +205,8 @@ export async function resolveDeletionRequest(id: string) {
     const docRef = doc(db, DELETIONS_COLLECTION, id);
     await updateDoc(docRef, { status: "processed", updatedAt: serverTimestamp() });
 }
+
+export async function updateUserRole(uid: string, role: "USER" | "ADMIN") {
+    const docRef = doc(db, USERS_COLLECTION, uid);
+    await updateDoc(docRef, { role, updatedAt: serverTimestamp() });
+}

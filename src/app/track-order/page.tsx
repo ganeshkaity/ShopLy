@@ -1,37 +1,61 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Package, Truck, CheckCircle2, AlertCircle, Box, MapPin, Calendar } from "lucide-react";
+import { Search, Package, Truck, CheckCircle2, AlertCircle, Box, MapPin, Calendar, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
+import { getOrderById } from "@/services/order.service";
+import { Order, OrderStatus } from "@/types";
+
+const STATUS_ICONS: Record<string, any> = {
+    'Order Placed': CheckCircle2,
+    'Order Accepted': Box,
+    'CONFIRMED': Box,
+    'Packed': Package,
+    'Couriered': Truck,
+    'Shipped': Truck,
+    'Out for Delivery': Package,
+    'Delivered': MapPin
+};
 
 export default function TrackOrderPage() {
     const [orderId, setOrderId] = useState("");
     const [isSearching, setIsSearching] = useState(false);
-    const [showStatus, setShowStatus] = useState(false);
+    const [order, setOrder] = useState<Order | null>(null);
+    const [searched, setSearched] = useState(false);
 
-    const handleTrack = (e: React.FormEvent) => {
+    const handleTrack = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!orderId) return;
+        if (!orderId.trim()) return;
 
         setIsSearching(true);
-        // Simulate tracking lookup
-        setTimeout(() => {
+        setSearched(true);
+        try {
+            const data = await getOrderById(orderId.trim());
+            setOrder(data);
+        } catch (error) {
+            console.error(error);
+            setOrder(null);
+        } finally {
             setIsSearching(false);
-            setShowStatus(true);
-        }, 1200);
+        }
     };
 
-    const trackingSteps = [
-        { status: 'Confirmed', date: 'Oct 24, 2023', time: '10:30 AM', active: true, done: true, icon: CheckCircle2 },
-        { status: 'Processing', date: 'Oct 24, 2023', time: '02:45 PM', active: true, done: true, icon: Box },
-        { status: 'Shipped', date: 'Oct 25, 2023', time: '09:15 AM', active: true, done: false, icon: Truck },
-        { status: 'Out for Delivery', date: '--', time: '--', active: false, done: false, icon: Package },
-        { status: 'Delivered', date: '--', time: '--', active: false, done: false, icon: MapPin },
-    ];
+    const trackingSteps = order?.statusHistory?.map((history, idx) => ({
+        status: history.status,
+        date: new Date(history.timestamp).toLocaleDateString(),
+        time: new Date(history.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        active: true, // All history items are achieved
+        done: idx < (order.statusHistory?.length || 0) - 1, // Not done if it's the very last step
+        icon: STATUS_ICONS[history.status] || Box,
+        note: history.note
+    })) || [];
+
+    // Reverse so newest is on top or bottom? Standard is chronological (oldest top, newest bottom).
+    // It's already chronological in history array.
 
     return (
         <div className="flex flex-col gap-0 min-h-screen bg-gray-50/30">
@@ -52,19 +76,19 @@ export default function TrackOrderPage() {
                     <form onSubmit={handleTrack} className="relative max-w-xl mx-auto group">
                         <div className="relative">
                             <Input
-                                placeholder="Enter Order ID (e.g. #SL-98241)"
+                                placeholder="Enter Order ID (e.g. 5xV...)"
                                 value={orderId}
                                 onChange={(e) => setOrderId(e.target.value)}
-                                className="h-16 pl-14 pr-32 rounded-full border-2 border-border focus:border-primary/50 transition-all text-lg shadow-lg group-hover:shadow-xl group-focus-within:shadow-xl"
+                                className="h-16 pl-14 pr-36 rounded-full border-2 border-border focus:border-primary/50 transition-all text-lg shadow-lg group-hover:shadow-xl group-focus-within:shadow-xl"
                             />
                             <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
                             <Button
                                 type="submit"
                                 size="lg"
                                 className="absolute right-2 top-2 h-12 px-8 rounded-full shadow-lg shadow-primary/20"
-                                disabled={isSearching || !orderId}
+                                disabled={isSearching || !orderId.trim()}
                             >
-                                {isSearching ? "Finding..." : "Track"}
+                                {isSearching ? <Loader2 className="w-5 h-5 animate-spin" /> : "Track"}
                             </Button>
                         </div>
                     </form>
@@ -74,73 +98,113 @@ export default function TrackOrderPage() {
             {/* Results Section */}
             <section className="py-16 md:py-24">
                 <div className="container-custom">
-                    {showStatus ? (
+                    {searched && order ? (
                         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom duration-700">
                             {/* Order Summary Header */}
                             <div className="bg-white rounded-3xl p-8 md:p-10 border border-border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                                 <div className="space-y-2">
-                                    <p className="text-sm font-bold uppercase tracking-widest text-primary">Order {orderId}</p>
-                                    <h2 className="text-2xl font-bold">Estimated Delivery: Oct 28, 2023</h2>
+                                    <p className="text-sm font-bold uppercase tracking-widest text-primary">Order {order.id}</p>
+                                    <h2 className="text-2xl font-bold">Total: {formatCurrency(order.totalAmount)}</h2>
                                     <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
-                                        <span className="flex items-center gap-1"><Calendar className="h-4 w-4" /> Ordered on Oct 24</span>
+                                        <span className="flex items-center gap-1"><Calendar className="h-4 w-4" /> Ordered on {new Date(order.createdAt).toLocaleDateString()}</span>
                                         <span className="h-1 w-1 rounded-full bg-border" />
-                                        <span className="flex items-center gap-1 font-medium text-blue-600">Status: On its way</span>
+                                        <span className="flex items-center gap-1 font-medium text-blue-600">Status: {order.status}</span>
                                     </div>
                                 </div>
-                                <Button variant="outline" className="rounded-full border-primary/20 text-primary hover:bg-primary/5 px-8">
-                                    View Order Details
-                                </Button>
                             </div>
 
                             {/* Tracking Timeline */}
                             <Card className="border-none shadow-xl bg-white overflow-hidden rounded-[2.5rem]">
                                 <CardContent className="p-8 md:p-12">
+                                    <h3 className="font-bold text-xl mb-8 flex items-center gap-2">
+                                        <Truck className="w-6 h-6 text-primary" /> Tracking Timeline
+                                    </h3>
                                     <div className="space-y-12">
-                                        {trackingSteps.map((step, idx) => (
-                                            <div key={idx} className="relative flex gap-8 group">
-                                                {/* Vertical Connector Line */}
-                                                {idx !== trackingSteps.length - 1 && (
+                                        {trackingSteps.map((step, idx) => {
+                                            const isLast = idx === trackingSteps.length - 1;
+                                            return (
+                                                <div key={idx} className="relative flex gap-8 group">
+                                                    {/* Vertical Connector Line */}
+                                                    {!isLast && (
+                                                        <div className={cn(
+                                                            "absolute left-6 top-12 bottom-[-48px] w-[2px] rounded-full",
+                                                            "bg-primary"
+                                                        )} />
+                                                    )}
+
+                                                    {/* Step Icon */}
                                                     <div className={cn(
-                                                        "absolute left-6 top-12 bottom-[-48px] w-[2px] rounded-full",
-                                                        step.done ? "bg-primary" : "bg-gray-100"
-                                                    )} />
-                                                )}
+                                                        "h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 z-10 transition-all duration-500",
+                                                        isLast ? "bg-primary text-white scale-110 shadow-lg shadow-primary/20" : "bg-primary/10 text-primary"
+                                                    )}>
+                                                        <step.icon className="h-6 w-6" />
+                                                    </div>
 
-                                                {/* Step Icon */}
-                                                <div className={cn(
-                                                    "h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 z-10 transition-all duration-500",
-                                                    step.active ? "bg-primary text-white scale-110 shadow-lg shadow-primary/20" : "bg-gray-100 text-gray-400"
-                                                )}>
-                                                    <step.icon className="h-6 w-6" />
-                                                </div>
-
-                                                {/* Step Info */}
-                                                <div className="flex flex-col gap-1 py-1">
-                                                    <div className="flex items-baseline gap-3">
-                                                        <h3 className={cn(
-                                                            "text-xl font-bold transition-colors",
-                                                            step.active ? "text-gray-900" : "text-gray-400"
+                                                    {/* Step Info */}
+                                                    <div className="flex flex-col gap-1 py-1">
+                                                        <div className="flex items-baseline gap-3">
+                                                            <h3 className={cn(
+                                                                "text-xl font-bold transition-colors",
+                                                                "text-gray-900"
+                                                            )}>
+                                                                {step.status}
+                                                            </h3>
+                                                            {isLast && (
+                                                                <Badge className="bg-primary">Current</Badge>
+                                                            )}
+                                                        </div>
+                                                        <p className={cn(
+                                                            "text-sm",
+                                                            "text-muted-foreground flex items-center gap-2"
                                                         )}>
-                                                            {step.status}
-                                                        </h3>
-                                                        {step.done && (
-                                                            <div className="h-2 w-2 rounded-full bg-primary" />
+                                                            <Clock className="w-3.5 h-3.5" />
+                                                            {step.date} • {step.time}
+                                                        </p>
+                                                        {step.note && (
+                                                            <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg mt-2 border border-gray-100">
+                                                                {step.note}
+                                                            </p>
                                                         )}
                                                     </div>
-                                                    <p className={cn(
-                                                        "text-sm",
-                                                        step.active ? "text-muted-foreground" : "text-gray-300"
-                                                    )}>
-                                                        {step.date} • {step.time}
-                                                    </p>
                                                 </div>
+                                            );
+                                        })}
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Items Section */}
+                            <Card className="border-none shadow-xl bg-white overflow-hidden rounded-[2.5rem]">
+                                <CardContent className="p-8 md:p-12">
+                                    <h3 className="font-bold text-xl mb-6 flex items-center gap-2">
+                                        <Package className="w-6 h-6 text-primary" /> Items in this Shipment
+                                    </h3>
+                                    <div className="space-y-4">
+                                        {order.items.map((item, idx) => (
+                                            <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50/50 border border-gray-100">
+                                                <img src={item.image} alt={item.name} className="w-16 h-16 rounded-xl object-cover" />
+                                                <div className="flex-1">
+                                                    <p className="font-bold text-gray-900 line-clamp-1">{item.name}</p>
+                                                    <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                                                </div>
+                                                <p className="font-bold">{formatCurrency(item.price * item.quantity)}</p>
                                             </div>
                                         ))}
                                     </div>
                                 </CardContent>
                             </Card>
                         </div>
-                    ) : (
+                    ) : searched && !order && !isSearching ? (
+                        <div className="max-w-xl mx-auto text-center space-y-6 opacity-60 py-12">
+                            <div className="mx-auto h-24 w-24 rounded-3xl bg-red-50 flex items-center justify-center text-red-400">
+                                <AlertCircle className="h-10 w-10" />
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-xl font-bold">Order Not Found</h3>
+                                <p className="text-muted-foreground">We couldn't find an order matching that ID. Please check and try again.</p>
+                            </div>
+                        </div>
+                    ) : !isSearching && !searched ? (
                         <div className="max-w-xl mx-auto text-center space-y-6 opacity-60 grayscale py-12">
                             <div className="mx-auto h-24 w-24 rounded-3xl bg-gray-100 flex items-center justify-center text-gray-400">
                                 <Search className="h-10 w-10" />
@@ -150,7 +214,7 @@ export default function TrackOrderPage() {
                                 <p className="text-muted-foreground">Enter your order ID above to reveal the tracking timeline.</p>
                             </div>
                         </div>
-                    )}
+                    ) : null}
                 </div>
             </section>
 
@@ -170,9 +234,6 @@ export default function TrackOrderPage() {
                             <div className="flex flex-col md:flex-row gap-4 justify-center pt-4">
                                 <Button variant="outline" className="rounded-full bg-white text-gray-900 hover:bg-gray-100 border-none px-10 h-14 font-bold">
                                     Contact Support
-                                </Button>
-                                <Button variant="ghost" className="rounded-full text-white hover:bg-white/10 h-14 px-10">
-                                    Track on App
                                 </Button>
                             </div>
                         </div>

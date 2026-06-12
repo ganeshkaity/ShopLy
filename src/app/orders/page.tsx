@@ -13,12 +13,21 @@ import { Spinner } from "@/components/ui/Spinner";
 import { Package, ArrowRight } from "lucide-react";
 import { ORDER_STATUS_COLORS } from "@/constants";
 
+import { useRouter } from "next/navigation";
+import { auth } from "@/lib/firebase";
+
 export default function OrdersPage() {
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
+    const router = useRouter();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (!authLoading && user && auth.currentUser && !auth.currentUser.emailVerified && auth.currentUser.providerData?.some(p => p.providerId === 'password')) {
+            router.push("/verification");
+            return;
+        }
+
         const fetchOrders = async () => {
             if (!user) return;
             try {

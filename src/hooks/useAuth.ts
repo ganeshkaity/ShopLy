@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth as useAuthContext } from "@/context/AuthContext";
-import { loginUser, signUpUser, logoutUser, linkGoogleAccount, addPasswordToUser } from "@/services/auth.service";
+import { loginUser, signUpUser, logoutUser, linkGoogleAccount, addPasswordToUser, loginWithGoogle, resetPassword } from "@/services/auth.service";
 
 /**
  * Custom hook to simplify auth actions.
@@ -16,5 +16,7 @@ export function useAuth() {
         logout: logoutUser,
         linkGoogleAccount,
         addPasswordToUser,
+        loginWithGoogle,
+        resetPassword,
     };
 }

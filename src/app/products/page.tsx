@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { useSearchParams, useRouter } from "next/navigation";
 import { PageLoader } from "@/components/ui/PageLoader";
+import { Search } from "lucide-react";
+import { Input } from "@/components/ui/Input";
 
 function ProductsContent() {
     const searchParams = useSearchParams();
@@ -23,6 +25,7 @@ function ProductsContent() {
     const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
     const [sortBy, setSortBy] = useState('newest');
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+    const [localSearch, setLocalSearch] = useState(searchQuery || "");
     
     // New boolean filters
     const [freeShipping, setFreeShipping] = useState(false);
@@ -65,6 +68,17 @@ function ProductsContent() {
         router.push(`/products?${params.toString()}`);
     };
 
+    const handleSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const params = new URLSearchParams(searchParams.toString());
+        if (localSearch.trim()) {
+            params.set('search', localSearch.trim());
+        } else {
+            params.delete('search');
+        }
+        router.push(`/products?${params.toString()}`);
+    };
+
     const observerTarget = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -89,11 +103,29 @@ function ProductsContent() {
             <div className="flex flex-col gap-8">
                 {/* Page Title & Mobile Toggle */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 w-full md:w-auto">
                         <h1 className="font-serif text-4xl font-bold">
                             {searchQuery ? `Search Results for "${searchQuery}"` : "Our Collection"}
                         </h1>
                         <p className="text-muted-foreground text-sm md:text-base">Explore unique stationery and curated gift items.</p>
+                        
+                        <form onSubmit={handleSearchSubmit} className="mt-4 flex w-full max-w-md items-center relative">
+                            <Input
+                                type="search"
+                                placeholder="Search products..."
+                                className="w-full pr-10 border-primary/20 bg-primary/5 focus-visible:ring-primary/30 rounded-full"
+                                value={localSearch}
+                                onChange={(e) => setLocalSearch(e.target.value)}
+                            />
+                            <Button
+                                type="submit"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-0 top-0 h-full rounded-r-full hover:bg-transparent"
+                            >
+                                <Search className="h-4 w-4 text-primary" />
+                            </Button>
+                        </form>
                     </div>
 
                     {/* Mobile Filter Toggle */}

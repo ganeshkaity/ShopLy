@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import React, { useEffect } from "react";
-import { LayoutDashboard, Package, ShoppingCart, Users, Tag, BarChart3, ChevronLeft, Menu, X, Settings, MessageSquare, Layers, Bell, MessageCircle, UserX } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, Users, Tag, BarChart3, ChevronLeft, Menu, X, Settings, MessageSquare, Layers, Bell, MessageCircle, UserX, Shirt } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
@@ -15,6 +15,7 @@ const ADMIN_LINKS = [
     { name: "Products", href: "/admin/products", icon: Package },
     { name: "Categories", href: "/admin/categories", icon: Layers },
     { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
+    { name: "T-Shirt Print", href: "/admin/tshirt-print", icon: Shirt },
     { name: "Users", href: "/admin/users", icon: Users },
     { name: "Coupons", href: "/admin/coupons", icon: Tag },
     { name: "Popups", href: "/admin/popups", icon: MessageSquare },

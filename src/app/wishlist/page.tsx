@@ -1,10 +1,14 @@
 "use client";
 
+import { useEffect } from "react";
+
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Heart, ShoppingCart, Trash2 } from "lucide-react";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useAuth } from "@/hooks/useAuth";
+import { auth } from "@/lib/firebase";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -12,7 +16,14 @@ import { Spinner } from "@/components/ui/Spinner";
 
 export default function WishlistPage() {
     const { items, loading, toggleItem } = useWishlist();
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!authLoading && user && auth.currentUser && !auth.currentUser.emailVerified && auth.currentUser.providerData?.some(p => p.providerId === 'password')) {
+            router.push("/verification");
+        }
+    }, [user, authLoading, router]);
 
     if (loading) {
         return (

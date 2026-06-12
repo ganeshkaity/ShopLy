@@ -4,7 +4,9 @@ import {
     signOut,
     updateProfile,
     onAuthStateChanged,
-    User as FirebaseUser
+    User as FirebaseUser,
+    sendPasswordResetEmail,
+    sendEmailVerification
 } from "firebase/auth";
 import {
     doc,
@@ -24,6 +26,7 @@ export async function signUpUser(email: string, password: string, displayName: s
     const user = userCredential.user;
 
     await updateProfile(user, { displayName });
+    await sendEmailVerification(user);
 
     const profile: UserProfile = {
         uid: user.uid,
@@ -102,9 +105,66 @@ export async function linkGoogleAccount() {
 }
 
 /**
+ * Logs in with Google. If the user doesn't exist in Firestore, creates their profile.
+ */
+export async function loginWithGoogle() {
+    const { signInWithPopup } = await import("firebase/auth");
+    const provider = new GoogleAuthProvider();
+    const userCredential = await signInWithPopup(auth, provider);
+    const user = userCredential.user;
+
+    // Check if user exists in Firestore, if not create profile
+    const existingProfile = await getUserProfile(user.uid);
+    if (!existingProfile) {
+        const profile: UserProfile = {
+            uid: user.uid,
+            email: user.email!,
+            displayName: user.displayName || "User",
+            role: 'USER',
+            isBlocked: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+
+        const docData: any = {
+            ...profile,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        };
+
+        if (user.photoURL) {
+            docData.avatarBase64 = user.photoURL;
+        }
+
+        await setDoc(doc(db, "users", user.uid), docData);
+    }
+
+    return user;
+}
+
+/**
  * Adds a password to a user (e.g., one who originally signed in with Google only).
  */
 export async function addPasswordToUser(password: string) {
     if (!auth.currentUser) throw new Error("No user is currently signed in.");
     await updatePassword(auth.currentUser, password);
+}
+
+/**
+ * Resends the verification email to the currently authenticated user.
+ */
+export async function resendVerificationEmail() {
+    if (auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
+    } else {
+        throw new Error("No user is currently signed in.");
+    }
+}
+
+/**
+ * Sends a password reset email to the given email address.
+ */
+export async function resetPassword(email: string) {
+    if (!email) throw new Error("Email address is required.");
+    await sendPasswordResetEmail(auth, email);
 }

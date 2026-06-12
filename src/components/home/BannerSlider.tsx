@@ -11,8 +11,9 @@ interface BannerSliderProps {
 }
 
 export function BannerSlider({ banners }: BannerSliderProps) {
-    // Clone first and last for infinite loop
-    const slides = [banners[banners.length - 1], ...banners, banners[0]];
+    // Filter valid banners and clone first/last for infinite loop
+    const validBanners = banners.filter(b => b.imageUrl && b.imageUrl.trim() !== "");
+    const slides = validBanners.length > 0 ? [validBanners[validBanners.length - 1], ...validBanners, validBanners[0]] : [];
     const [currentIndex, setCurrentIndex] = useState(1);
     const [isPaused, setIsPaused] = useState(false);
     const [isTransitioning, setIsTransitioning] = useState(true);
@@ -23,20 +24,20 @@ export function BannerSlider({ banners }: BannerSliderProps) {
 
     // Auto-scroll logic
     useEffect(() => {
-        if (banners.length <= 1 || isPaused || isDragging) return;
+        if (validBanners.length <= 1 || isPaused || isDragging) return;
 
         const interval = setInterval(() => {
             nextSlide();
         }, 5000);
 
         return () => clearInterval(interval);
-    }, [banners.length, isPaused, isDragging]);
+    }, [validBanners.length, isPaused, isDragging]);
 
     // Handle jump for infinite loop
     const handleTransitionEnd = () => {
         if (currentIndex === 0) {
             setIsTransitioning(false);
-            setCurrentIndex(banners.length);
+            setCurrentIndex(validBanners.length);
         } else if (currentIndex === slides.length - 1) {
             setIsTransitioning(false);
             setCurrentIndex(1);
@@ -83,10 +84,10 @@ export function BannerSlider({ banners }: BannerSliderProps) {
         // keeping it simple for now as the user primarily asked for infinite auto/nav scroll
     };
 
-    if (!banners || banners.length === 0) return null;
+    if (!validBanners || validBanners.length === 0) return null;
 
     // Map currentIndex to dot index (1 -> 0, 2 -> 1, ..., N -> N-1)
-    const activeDotIndex = ((currentIndex - 1) % banners.length + banners.length) % banners.length;
+    const activeDotIndex = ((currentIndex - 1) % validBanners.length + validBanners.length) % validBanners.length;
 
     return (
         <section className={cn(
@@ -132,7 +133,7 @@ export function BannerSlider({ banners }: BannerSliderProps) {
                 </div>
 
                 {/* Navigation Arrows */}
-                {banners.length > 1 && (
+                {validBanners.length > 1 && (
                     <>
                         <button
                             onClick={(e) => { e.preventDefault(); prevSlide(); }}
@@ -150,9 +151,9 @@ export function BannerSlider({ banners }: BannerSliderProps) {
                 )}
 
                 {/* Progress Indicators */}
-                {banners.length > 1 && (
+                {validBanners.length > 1 && (
                     <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 flex gap-1.5 md:gap-3 z-10">
-                        {banners.map((_, idx) => (
+                        {validBanners.map((_, idx) => (
                             <button
                                 key={idx}
                                 onClick={() => goToSlide(idx)}

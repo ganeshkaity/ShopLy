@@ -25,7 +25,7 @@ export interface ShippingAddress {
     phone: string;
 }
 
-export type ProductType = 'PHYSICAL' | 'DIGITAL';
+export type ProductType = 'PHYSICAL' | 'DIGITAL' | 'REDIRECTION';
 
 export interface VariantOption {
     id: string;
@@ -55,6 +55,7 @@ export interface Product {
     stock: number;
     weight?: number;
     digitalFileUrl?: string;
+    targetUrl?: string; // For REDIRECTION type products
     productDetails?: string;
     minOrderQty?: number;
     freeShipping?: boolean;
@@ -246,6 +247,19 @@ export interface Category {
     slug: string;
     backgroundImage: string;
     isActive: boolean;
+    order?: number;
     createdAt: string;
     updatedAt: string;
+}
+
+export interface ProductReview {
+    id: string;
+    productId: string;
+    userId: string;
+    userName: string;
+    userAvatar?: string;
+    rating: number; // 1-5
+    comment: string;
+    imageBase64?: string; // Storing as base64 per user request
+    createdAt: string;
 }

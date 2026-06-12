@@ -12,6 +12,7 @@ import { useToast } from "@/context/ToastContext";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
+import { Search } from "lucide-react";
 
 const TAG_OPTIONS: { value: NotificationTag, color: string }[] = [
     { value: "Important", color: "bg-red-100 text-red-700 border-red-200" },
@@ -28,6 +29,9 @@ export default function AdminNotificationsPage() {
     
     const [notifications, setNotifications] = useState<GlobalNotification[]>([]);
     const [fetching, setFetching] = useState(true);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [tagFilter, setTagFilter] = useState("all");
+    const [sortBy, setSortBy] = useState("newest");
 
     const [isCreating, setIsCreating] = useState(false);
     const [title, setTitle] = useState("");
@@ -84,6 +88,24 @@ export default function AdminNotificationsPage() {
     };
 
     if (loading || fetching) return <div className="p-8 flex justify-center"><Spinner /></div>;
+
+    const filteredNotifications = notifications
+        .filter(n => {
+            if (tagFilter !== "all" && n.tag !== tagFilter) return false;
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase();
+                return (
+                    n.title.toLowerCase().includes(query) ||
+                    n.message.toLowerCase().includes(query)
+                );
+            }
+            return true;
+        })
+        .sort((a, b) => {
+            const timeA = a.createdAt?.toMillis?.() || 0;
+            const timeB = b.createdAt?.toMillis?.() || 0;
+            return sortBy === "newest" ? timeB - timeA : timeA - timeB;
+        });
 
     return (
         <div className="p-6 md:p-8 space-y-6 max-w-5xl mx-auto">
@@ -150,13 +172,44 @@ export default function AdminNotificationsPage() {
                 </Card>
             )}
 
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
+                <div className="flex-1 relative">
+                    <Input
+                        placeholder="Search by title or message..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        icon={<Search className="w-4 h-4" />}
+                    />
+                </div>
+                <div className="flex gap-4">
+                    <select
+                        value={tagFilter}
+                        onChange={(e) => setTagFilter(e.target.value)}
+                        className="rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                        <option value="all">All Tags</option>
+                        {TAG_OPTIONS.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.value}</option>
+                        ))}
+                    </select>
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                    </select>
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-4">
-                {notifications.length === 0 ? (
+                {filteredNotifications.length === 0 ? (
                     <div className="text-center py-12 bg-white rounded-3xl border border-gray-100 shadow-sm">
                         <p className="text-gray-500">No active notifications.</p>
                     </div>
                 ) : (
-                    notifications.map(notif => {
+                    filteredNotifications.map(notif => {
                         const tagStyle = TAG_OPTIONS.find(t => t.value === notif.tag)?.color || "bg-gray-100";
                         return (
                             <Card key={notif.id} className="border-none shadow-sm overflow-hidden group">

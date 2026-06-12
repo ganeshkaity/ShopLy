@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { useToast } from "@/context/ToastContext";
-import { Users, ShieldCheck, ShieldOff, Search } from "lucide-react";
+import { Users, ShieldCheck, ShieldOff, Search, UserCog, User } from "lucide-react";
+import { updateUserRole } from "@/services/user.service";
 
 export default function AdminUsersPage() {
     const [users, setUsers] = useState<UserProfile[]>([]);
@@ -34,6 +35,18 @@ export default function AdminUsersPage() {
             setUsers(prev => prev.map(u => u.uid === uid ? { ...u, isBlocked: !isBlocked } : u));
             toast(`User ${!isBlocked ? "blocked" : "unblocked"}`, "success");
         } catch (error) { toast("Failed to update user", "error"); }
+    };
+
+    const toggleRole = async (uid: string, currentRole: string) => {
+        const newRole = currentRole === "ADMIN" ? "USER" : "ADMIN";
+        if (newRole === "ADMIN" && !confirm("Are you sure you want to grant this user Admin privileges?")) return;
+        if (newRole === "USER" && !confirm("Are you sure you want to remove Admin privileges from this user?")) return;
+        
+        try {
+            await updateUserRole(uid, newRole);
+            setUsers(prev => prev.map(u => u.uid === uid ? { ...u, role: newRole } : u));
+            toast(`User role changed to ${newRole}`, "success");
+        } catch (error) { toast("Failed to update user role", "error"); }
     };
 
     const filtered = users.filter(u =>
@@ -67,14 +80,24 @@ export default function AdminUsersPage() {
                                     </div>
                                     <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                                 </div>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => toggleBlock(user.uid, user.isBlocked)}
-                                    className={user.isBlocked ? "text-green-600 hover:bg-green-50" : "text-red-500 hover:bg-red-50"}
-                                >
-                                    {user.isBlocked ? <><ShieldCheck className="h-3 w-3 mr-1" /> Unblock</> : <><ShieldOff className="h-3 w-3 mr-1" /> Block</>}
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => toggleRole(user.uid, user.role || "USER")}
+                                        className={user.role === "ADMIN" ? "text-amber-600 hover:bg-amber-50" : "text-blue-600 hover:bg-blue-50"}
+                                    >
+                                        {user.role === "ADMIN" ? <><User className="h-3 w-3 mr-1" /> Make User</> : <><UserCog className="h-3 w-3 mr-1" /> Make Admin</>}
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => toggleBlock(user.uid, user.isBlocked)}
+                                        className={user.isBlocked ? "text-green-600 hover:bg-green-50" : "text-red-500 hover:bg-red-50"}
+                                    >
+                                        {user.isBlocked ? <><ShieldCheck className="h-3 w-3 mr-1" /> Unblock</> : <><ShieldOff className="h-3 w-3 mr-1" /> Block</>}
+                                    </Button>
+                                </div>
                             </CardContent>
                         </Card>
                     ))}

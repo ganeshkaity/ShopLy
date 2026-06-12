@@ -29,7 +29,7 @@ const EMPTY_PRODUCT: any = {
     isActive: true, weight: 0, productDetails: "", minOrderQty: 1,
     freeShipping: false, returnAvailable: false, returnDays: 7,
     codAvailable: false, securePayment: true,
-    badgeLabel: "", badgeVariant: "default"
+    badgeLabel: "", badgeVariant: "default", targetUrl: ""
 };
 
 const BADGE_OPTIONS = [
@@ -184,6 +184,7 @@ export function ProductForm({ initialData, productId, isEdit }: ProductFormProps
         secondaryTag: formData.secondaryTag || "",
         badgeLabel: formData.badgeLabel || "",
         badgeVariant: formData.badgeVariant || "default",
+        targetUrl: formData.targetUrl || "",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     };
@@ -270,9 +271,14 @@ export function ProductForm({ initialData, productId, isEdit }: ProductFormProps
                                     <select className="w-full rounded-lg border border-border bg-white p-2.5 text-sm outline-none" value={formData.type} onChange={(e) => setFormData((prev: any) => ({ ...prev, type: e.target.value as any }))}>
                                         <option value="PHYSICAL">Physical</option>
                                         <option value="DIGITAL">Digital</option>
+                                        <option value="REDIRECTION">Redirection</option>
                                     </select>
                                 </div>
-                                <Input label="Weight (g)" type="number" value={formData.weight} onChange={(e) => setFormData((prev: any) => ({ ...prev, weight: Number(e.target.value) }))} />
+                                {formData.type === 'REDIRECTION' ? (
+                                    <Input label="Target URL (for Redirection)" value={formData.targetUrl || ''} onChange={(e) => setFormData((prev: any) => ({ ...prev, targetUrl: e.target.value }))} placeholder="https://example.com" />
+                                ) : (
+                                    <Input label="Weight (g)" type="number" value={formData.weight} onChange={(e) => setFormData((prev: any) => ({ ...prev, weight: Number(e.target.value) }))} />
+                                )}
                             </div>
 
                             <div className="bg-gray-50 p-4 rounded-xl border border-border space-y-4">

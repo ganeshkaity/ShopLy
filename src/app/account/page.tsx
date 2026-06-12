@@ -50,7 +50,7 @@ import {
 type ViewState = "overview" | "edit" | "security" | "addresses";
 
 export default function AccountPage() {
-    const { user, isAdmin, loading: authLoading, logout, linkGoogleAccount, addPasswordToUser } = useAuth();
+    const { user, isAdmin, loading: authLoading, logout, linkGoogleAccount, addPasswordToUser, resetPassword } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
 
@@ -73,6 +73,7 @@ export default function AccountPage() {
 
     const [newPassword, setNewPassword] = useState("");
     const [isAddingPassword, setIsAddingPassword] = useState(false);
+    const [isSendingReset, setIsSendingReset] = useState(false);
 
     // Addresses states
     const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
@@ -90,8 +91,12 @@ export default function AccountPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        if (!authLoading && !user) {
-            router.push("/login?redirect=/account");
+        if (!authLoading) {
+            if (!user) {
+                router.push("/login?redirect=/account");
+            } else if (auth.currentUser && !auth.currentUser.emailVerified && auth.currentUser.providerData?.some(p => p.providerId === 'password')) {
+                router.push("/verification");
+            }
         }
     }, [user, authLoading, router]);
 
@@ -209,12 +214,30 @@ export default function AccountPage() {
         setIsAddingPassword(true);
         try {
             await addPasswordToUser(newPassword);
-            toast("Password added successfully", "success");
+            toast("Password added/updated successfully", "success");
             setNewPassword("");
         } catch (error: any) {
-            toast(error.message || "Failed to add password", "error");
+            console.error("Error adding password:", error);
+            toast(error.message || "Failed to set password", "error");
         } finally {
             setIsAddingPassword(false);
+        }
+    };
+
+    const handleSendResetEmail = async () => {
+        if (!user?.email) {
+            toast("No email address found to send the reset link to.", "error");
+            return;
+        }
+        setIsSendingReset(true);
+        try {
+            await resetPassword(user.email);
+            toast("Password reset email sent! Check your inbox.", "success");
+        } catch (error: any) {
+            console.error("Error sending reset email:", error);
+            toast(error.message || "Failed to send reset email.", "error");
+        } finally {
+            setIsSendingReset(false);
         }
     };
 
@@ -348,7 +371,9 @@ export default function AccountPage() {
                                                 className="h-full w-full object-cover"
                                             />
                                         ) : (
-                                            <UserCircle className="h-full w-full text-primary/10" />
+                                            <div className="w-full h-full bg-white flex items-center justify-center p-6">
+                                                <img src="/paper.png" alt="Default Avatar" className="w-full h-full object-contain" />
+                                            </div>
                                         )}
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer">
                                             <Camera className="text-white h-6 w-6 mb-1" />
@@ -544,23 +569,38 @@ export default function AccountPage() {
                                                 <LinkIcon className="w-4 h-4 mr-2" /> Link with Google Account
                                             </Button>
                                         )}
-                                        
-                                        <form onSubmit={handleAddPassword} className="space-y-3 pt-4 border-t border-gray-50">
-                                            <h3 className="text-sm font-bold">{hasPassword ? "Change Password" : "Add Password (If using Google Login)"}</h3>
-                                            <div className="flex gap-2">
-                                                <Input 
-                                                    type="password" 
-                                                    placeholder="New Password" 
-                                                    value={newPassword}
-                                                    onChange={e => setNewPassword(e.target.value)}
-                                                    required
-                                                    className="h-12 rounded-xl"
-                                                />
-                                                <Button type="submit" disabled={isAddingPassword} className="h-12 rounded-xl px-6">
-                                                    {isAddingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : (hasPassword ? "Update" : "Set")}
+                                        {hasPassword ? (
+                                            <div className="space-y-3 pt-4 border-t border-gray-50">
+                                                <h3 className="text-sm font-bold">Change Password</h3>
+                                                <p className="text-sm text-gray-500">We will send a password reset link to your email.</p>
+                                                <Button 
+                                                    onClick={handleSendResetEmail} 
+                                                    disabled={isSendingReset} 
+                                                    variant="outline"
+                                                    className="w-full h-12 rounded-xl border-gray-200"
+                                                >
+                                                    {isSendingReset ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
+                                                    Send Password Reset Email
                                                 </Button>
                                             </div>
-                                        </form>
+                                        ) : (
+                                            <form onSubmit={handleAddPassword} className="space-y-3 pt-4 border-t border-gray-50">
+                                                <h3 className="text-sm font-bold">Add Password (If using Google Login)</h3>
+                                                <div className="flex gap-2">
+                                                    <Input 
+                                                        type="password" 
+                                                        placeholder="New Password" 
+                                                        value={newPassword}
+                                                        onChange={e => setNewPassword(e.target.value)}
+                                                        required
+                                                        className="h-12 rounded-xl"
+                                                    />
+                                                    <Button type="submit" disabled={isAddingPassword} className="h-12 rounded-xl px-6">
+                                                        {isAddingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : "Set"}
+                                                    </Button>
+                                                </div>
+                                            </form>
+                                        )}
                                     </div>
                                 </div>
 
