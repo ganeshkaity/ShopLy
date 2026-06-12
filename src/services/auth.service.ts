@@ -88,3 +88,23 @@ export async function updateLocalProfile(uid: string, data: Partial<UserProfile>
         updatedAt: serverTimestamp(),
     });
 }
+
+import { GoogleAuthProvider, linkWithPopup, updatePassword } from "firebase/auth";
+
+/**
+ * Links the current user's account with a Google account.
+ */
+export async function linkGoogleAccount() {
+    if (!auth.currentUser) throw new Error("No user is currently signed in.");
+    const provider = new GoogleAuthProvider();
+    const userCredential = await linkWithPopup(auth.currentUser, provider);
+    return userCredential.user;
+}
+
+/**
+ * Adds a password to a user (e.g., one who originally signed in with Google only).
+ */
+export async function addPasswordToUser(password: string) {
+    if (!auth.currentUser) throw new Error("No user is currently signed in.");
+    await updatePassword(auth.currentUser, password);
+}

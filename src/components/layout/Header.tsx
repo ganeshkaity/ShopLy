@@ -14,7 +14,8 @@ import {
     LayoutDashboard,
     History,
     UserCircle,
-    Mic
+    Mic,
+    Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/Button";
@@ -247,6 +248,14 @@ export function Header() {
                                 <Search className="h-5 w-5" />
                             </Button>
                         )}
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="hidden sm:flex relative"
+                            onClick={() => toast("Notifications coming soon!", "info")}
+                        >
+                            <Bell className="h-5 w-5" />
+                        </Button>
                         <Link href="/wishlist">
                             <Button variant="ghost" size="icon" className="hidden sm:flex relative">
                                 <Heart className="h-5 w-5" />
@@ -400,6 +409,15 @@ export function Header() {
                             >
                                 <History className="h-5 w-5" /> My Orders
                             </Link>
+                            <button
+                                onClick={() => {
+                                    setIsMenuOpen(false);
+                                    toast("Notifications coming soon!", "info");
+                                }}
+                                className="px-4 py-3 rounded-xl text-lg font-medium flex items-center gap-3 hover:bg-accent transition-colors text-left"
+                            >
+                                <Bell className="h-5 w-5" /> Notifications
+                            </button>
 
                             {!user && (
                                 <Link
