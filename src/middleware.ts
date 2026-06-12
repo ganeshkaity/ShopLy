@@ -7,6 +7,7 @@ import type { NextRequest } from 'next/server';
  * for Middleware to work effectively in a real-world prod app.
  * For now, we'll implement a basic structure that can be enhanced.
  */
+
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 

@@ -237,8 +237,8 @@ export default function HomePage() {
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, i) => (
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-5">
+              {Array.from({ length: 10 }).map((_, i) => (
                 <div key={i} className="flex flex-col gap-4">
                   <Skeleton className="aspect-square w-full rounded-3xl" />
                   <div className="space-y-2">
@@ -254,7 +254,7 @@ export default function HomePage() {
             </div>
           ) : products.length > 0 ? (
             <div className="space-y-12">
-              <div className="grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-5">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
