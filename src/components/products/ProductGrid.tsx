@@ -7,10 +7,11 @@ import { Skeleton } from "../ui/Skeleton";
 interface ProductGridProps {
     products: Product[];
     loading?: boolean;
+    hasMore?: boolean;
     className?: string;
 }
 
-export function ProductGrid({ products, loading, className }: ProductGridProps) {
+export function ProductGrid({ products, loading, hasMore = false, className }: ProductGridProps) {
     if (loading && products.length === 0) {
         return (
             <div className={cn("grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4", className)}>
@@ -31,7 +32,7 @@ export function ProductGrid({ products, loading, className }: ProductGridProps) 
         );
     }
 
-    if (products.length === 0) {
+    if (products.length === 0 && !hasMore && !loading) {
         return (
             <div className="flex h-[400px] w-full flex-col items-center justify-center text-center gap-4">
                 <h3 className="text-xl font-serif font-semibold">No products found</h3>

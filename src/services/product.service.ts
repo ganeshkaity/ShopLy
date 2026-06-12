@@ -31,8 +31,12 @@ export async function getProducts(options: {
     sortBy?: 'newest' | 'priceLowToHigh' | 'priceHighToLow' | 'popular';
     pageLimit?: number;
     lastDoc?: any;
+    randomSeed?: number;
+    freeShipping?: boolean;
+    returnAvailable?: boolean;
+    codAvailable?: boolean;
 }) {
-    const { category, minPrice, maxPrice, searchQuery, sortBy, pageLimit = 12, lastDoc } = options;
+    const { category, minPrice, maxPrice, searchQuery, sortBy, pageLimit = 12, lastDoc, randomSeed, freeShipping, returnAvailable, codAvailable } = options;
 
     let constraints: QueryConstraint[] = [where("isActive", "==", true)];
 
@@ -48,47 +52,84 @@ export async function getProducts(options: {
         constraints.push(where("price", "<=", maxPrice));
     }
 
+    if (freeShipping) {
+        constraints.push(where("freeShipping", "==", true));
+    }
+    
+    if (returnAvailable) {
+        constraints.push(where("returnAvailable", "==", true));
+    }
+
+    if (codAvailable) {
+        constraints.push(where("codAvailable", "==", true));
+    }
+
     // Sorting
-    switch (sortBy) {
-        case 'priceLowToHigh':
-            constraints.push(orderBy("price", "asc"));
-            break;
-        case 'priceHighToLow':
-            constraints.push(orderBy("price", "desc"));
-            break;
-        case 'newest':
-        default:
-            constraints.push(orderBy("createdAt", "desc"));
-            break;
-    }
+    if (randomSeed !== undefined) {
+        constraints.push(orderBy("createdAt", "desc"));
+        constraints.push(limit(100)); // Fetch more for random shuffling
+    } else {
+        switch (sortBy) {
+            case 'priceLowToHigh':
+                constraints.push(orderBy("price", "asc"));
+                break;
+            case 'priceHighToLow':
+                constraints.push(orderBy("price", "desc"));
+                break;
+            case 'newest':
+            default:
+                constraints.push(orderBy("createdAt", "desc"));
+                break;
+        }
 
-    if (lastDoc) {
-        constraints.push(startAfter(lastDoc));
-    }
+        if (lastDoc) {
+            constraints.push(startAfter(lastDoc));
+        }
 
-    constraints.push(limit(pageLimit));
+        constraints.push(limit(pageLimit));
+    }
 
     const q = query(collection(db, PRODUCTS_COLLECTION), ...constraints);
     const querySnapshot = await getDocs(q);
 
-    const products = querySnapshot.docs.map(doc => ({
+    let products = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || doc.data().createdAt,
         updatedAt: doc.data().updatedAt?.toDate?.()?.toISOString() || doc.data().updatedAt,
     })) as Product[];
 
-    // Client-side search filter (Firestore doesn't support full-text search directly without indices)
-    const filteredProducts = searchQuery
-        ? products.filter(p =>
-            p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.description.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        : products;
+    // Client-side search filter
+    if (searchQuery) {
+        const sq = searchQuery.toLowerCase();
+        products = products.filter(p =>
+            p.name.toLowerCase().includes(sq) ||
+            (p.secondaryTag && p.secondaryTag.toLowerCase().includes(sq)) ||
+            (p.category && p.category.toLowerCase().includes(sq))
+        );
+    }
+
+    if (randomSeed !== undefined) {
+        // Deterministic shuffle
+        const seededRandom = (seed: number) => {
+            let x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
+        };
+        
+        let seed = randomSeed;
+        for (let i = products.length - 1; i > 0; i--) {
+            const j = Math.floor(seededRandom(seed++) * (i + 1));
+            [products[i], products[j]] = [products[j], products[i]];
+        }
+        
+        products = products.slice(0, pageLimit);
+        return { products, lastDoc: null };
+    }
 
     return {
-        products: filteredProducts,
-        lastDoc: querySnapshot.docs[querySnapshot.docs.length - 1]
+        products,
+        lastDoc: querySnapshot.docs[querySnapshot.docs.length - 1],
+        hasMore: querySnapshot.docs.length === pageLimit
     };
 }
 

@@ -76,8 +76,14 @@ export default function HomePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        let seedStr = sessionStorage.getItem('home_product_seed');
+        if (!seedStr) {
+            seedStr = Math.floor(Math.random() * 10000).toString();
+            sessionStorage.setItem('home_product_seed', seedStr);
+        }
+        
         const [prodData, settingsData, categoriesData] = await Promise.all([
-          getProducts({ pageLimit: 20 }),
+          getProducts({ pageLimit: 20, randomSeed: parseInt(seedStr) }),
           getSettings(),
           getCategories(true) // Get only active categories
         ]);

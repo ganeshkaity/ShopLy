@@ -103,7 +103,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
                 )}>
                     {product.stock <= 0 && <Badge variant="destructive">Out of Stock</Badge>}
                     {!!product.compareAtPrice && product.compareAtPrice > product.price && (
-                        <Badge variant="success">
+                        <Badge variant="success" className="bg-white/40 backdrop-blur-md border border-white/50 shadow-lg text-emerald-950 drop-shadow-sm font-extrabold backdrop-saturate-200 tracking-wider">
                             -{Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)}%
                         </Badge>
                     )}

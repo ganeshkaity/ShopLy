@@ -23,6 +23,11 @@ function ProductsContent() {
     const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
     const [sortBy, setSortBy] = useState('newest');
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+    
+    // New boolean filters
+    const [freeShipping, setFreeShipping] = useState(false);
+    const [returnAvailable, setReturnAvailable] = useState(false);
+    const [codAvailable, setCodAvailable] = useState(false);
 
     // Sync category state with URL if it changes from outside
     useEffect(() => {
@@ -38,6 +43,9 @@ function ProductsContent() {
         maxPrice,
         sortBy: sortBy as any,
         searchQuery,
+        freeShipping,
+        returnAvailable,
+        codAvailable,
     });
 
     const handlePriceChange = (min: number | undefined, max: number | undefined) => {
@@ -47,17 +55,14 @@ function ProductsContent() {
 
     const handleCategoryChange = (newCategory: string) => {
         setCategory(newCategory);
-        // Also update URL to remove search query if changing category directly
-        if (searchQuery) {
-            const params = new URLSearchParams(searchParams.toString());
-            params.delete('search');
-            if (newCategory !== 'All') {
-                params.set('category', newCategory);
-            } else {
-                params.delete('category');
-            }
-            router.push(`/products?${params.toString()}`);
+        const params = new URLSearchParams(searchParams.toString());
+        if (newCategory !== 'All') {
+            params.set('category', newCategory);
+        } else {
+            params.delete('category');
         }
+        params.delete('search');
+        router.push(`/products?${params.toString()}`);
     };
 
     const observerTarget = useRef<HTMLDivElement>(null);
@@ -69,19 +74,15 @@ function ProductsContent() {
                     loadMore();
                 }
             },
-            { threshold: 1.0 }
+            { threshold: 0.1 }
         );
 
         if (observerTarget.current) {
             observer.observe(observerTarget.current);
         }
 
-        return () => {
-            if (observerTarget.current) {
-                observer.unobserve(observerTarget.current);
-            }
-        };
-    }, [observerTarget, hasMore, loading, loadMore]);
+        return () => observer.disconnect();
+    }, [hasMore, loading]); // simplified dependencies
 
     return (
         <div className="container-custom py-8 md:py-12">
@@ -104,17 +105,17 @@ function ProductsContent() {
                         >
                             <Filter className="h-4 w-4" />
                             <span>Filters & Sort</span>
-                            {(category !== 'All' || minPrice !== undefined || sortBy !== 'newest') && (
+                            {(category !== 'All' || minPrice !== undefined || sortBy !== 'newest' || freeShipping || returnAvailable || codAvailable) && (
                                 <span className="flex h-2 w-2 rounded-full bg-primary" />
                             )}
                         </Button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-12 lg:grid-cols-[260px_1fr]">
+                <div className="grid grid-cols-1 gap-12 lg:grid-cols-[260px_1fr] items-start pb-20">
                     {/* Desktop Filters */}
-                    <aside className="hidden lg:block">
-                        <div className="sticky top-24">
+                    <aside className="hidden lg:block sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto pr-4 scrollbar-hide">
+                        <div className="pb-10">
                             <ProductFilters
                                 activeCategory={category}
                                 onCategoryChange={handleCategoryChange}
@@ -123,6 +124,12 @@ function ProductsContent() {
                                 onPriceChange={handlePriceChange}
                                 sortBy={sortBy}
                                 onSortChange={setSortBy}
+                                freeShipping={freeShipping}
+                                onFreeShippingChange={setFreeShipping}
+                                returnAvailable={returnAvailable}
+                                onReturnAvailableChange={setReturnAvailable}
+                                codAvailable={codAvailable}
+                                onCodAvailableChange={setCodAvailable}
                             />
                         </div>
                     </aside>
@@ -150,9 +157,24 @@ function ProductsContent() {
                                     {maxPrice ? `₹${minPrice}-₹${maxPrice}` : `Over ₹${minPrice}`} <X className="ml-1 h-3 w-3" />
                                 </Badge>
                             )}
+                            {freeShipping && (
+                                <Badge variant="secondary" className="rounded-full px-3 py-1 cursor-pointer hover:bg-primary/10" onClick={() => setFreeShipping(false)}>
+                                    Free Shipping <X className="ml-1 h-3 w-3" />
+                                </Badge>
+                            )}
+                            {returnAvailable && (
+                                <Badge variant="secondary" className="rounded-full px-3 py-1 cursor-pointer hover:bg-primary/10" onClick={() => setReturnAvailable(false)}>
+                                    Return Available <X className="ml-1 h-3 w-3" />
+                                </Badge>
+                            )}
+                            {codAvailable && (
+                                <Badge variant="secondary" className="rounded-full px-3 py-1 cursor-pointer hover:bg-primary/10" onClick={() => setCodAvailable(false)}>
+                                    COD Available <X className="ml-1 h-3 w-3" />
+                                </Badge>
+                            )}
                         </div>
 
-                        <ProductGrid products={products} loading={loading && products.length === 0} />
+                        <ProductGrid products={products} loading={loading} hasMore={hasMore} />
 
                         {hasMore && (
                             <div className="flex justify-center pt-8 flex-col items-center gap-4">
@@ -160,7 +182,7 @@ function ProductsContent() {
                                 <Button
                                     variant="outline"
                                     onClick={loadMore}
-                                    isLoading={loading}
+                                    disabled={loading}
                                     className="rounded-full px-12 h-12 border-primary/20 text-primary hover:bg-primary hover:text-white transition-all"
                                 >
                                     Load More <ChevronDown className="ml-2 h-4 w-4" />
@@ -186,9 +208,24 @@ function ProductsContent() {
                         onPriceChange={(min, max) => { handlePriceChange(min, max); setIsFilterModalOpen(false); }}
                         sortBy={sortBy}
                         onSortChange={(sort) => { setSortBy(sort); setIsFilterModalOpen(false); }}
+                        freeShipping={freeShipping}
+                        onFreeShippingChange={setFreeShipping}
+                        returnAvailable={returnAvailable}
+                        onReturnAvailableChange={setReturnAvailable}
+                        codAvailable={codAvailable}
+                        onCodAvailableChange={setCodAvailable}
                     />
                 </div>
             </Modal>
+            <style dangerouslySetInnerHTML={{ __html: `
+                .scrollbar-hide::-webkit-scrollbar {
+                    display: none;
+                }
+                .scrollbar-hide {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                }
+            `}} />
         </div>
     );
 }

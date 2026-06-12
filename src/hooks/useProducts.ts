@@ -11,9 +11,12 @@ interface UseProductsProps {
     minPrice?: number;
     maxPrice?: number;
     limit?: number;
+    freeShipping?: boolean;
+    returnAvailable?: boolean;
+    codAvailable?: boolean;
 }
 
-export function useProducts({ category, sortBy, searchQuery, minPrice, maxPrice, limit = 12 }: UseProductsProps = {}) {
+export function useProducts({ category, sortBy, searchQuery, minPrice, maxPrice, limit = 12, freeShipping, returnAvailable, codAvailable }: UseProductsProps = {}) {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -30,6 +33,9 @@ export function useProducts({ category, sortBy, searchQuery, minPrice, maxPrice,
                 minPrice,
                 maxPrice,
                 pageLimit: limit,
+                freeShipping,
+                returnAvailable,
+                codAvailable,
                 lastDoc: isLoadMore ? lastDoc : null,
             });
 
@@ -40,7 +46,7 @@ export function useProducts({ category, sortBy, searchQuery, minPrice, maxPrice,
             }
 
             setLastDoc(result.lastDoc);
-            setHasMore(result.products.length === limit);
+            setHasMore(result.hasMore);
             setError(null);
         } catch (err: any) {
             console.error(err);
@@ -48,11 +54,11 @@ export function useProducts({ category, sortBy, searchQuery, minPrice, maxPrice,
         } finally {
             setLoading(false);
         }
-    }, [category, sortBy, searchQuery, limit, lastDoc]);
+    }, [category, sortBy, searchQuery, minPrice, maxPrice, limit, freeShipping, returnAvailable, codAvailable, lastDoc]);
 
     useEffect(() => {
         fetchProducts();
-    }, [category, sortBy, searchQuery]); // Re-fetch when filters change (reset lastDoc)
+    }, [category, sortBy, searchQuery, minPrice, maxPrice, freeShipping, returnAvailable, codAvailable]);
 
     const loadMore = () => {
         if (!loading && hasMore) {
