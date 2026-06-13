@@ -125,9 +125,29 @@ export default function AdminOrdersPage() {
                                                 <p className="font-semibold mb-2">Items</p>
                                                 <div className="divide-y">
                                                     {order.items?.map((item, idx) => (
-                                                        <div key={idx} className="flex items-center justify-between py-2 text-sm">
-                                                            <span>{item.name} x{item.quantity}</span>
-                                                            <span className="font-medium">{formatCurrency(item.price * item.quantity)}</span>
+                                                        <div key={idx} className="py-3 text-sm">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-3">
+                                                                    {item.image && (
+                                                                        <div className="relative w-10 h-10 rounded overflow-hidden border bg-gray-50">
+                                                                            <img src={item.image} alt="Product" className="w-full h-full object-contain" />
+                                                                        </div>
+                                                                    )}
+                                                                    <span>{item.name} x{item.quantity}</span>
+                                                                </div>
+                                                                <span className="font-medium">{formatCurrency(item.price * item.quantity)}</span>
+                                                            </div>
+                                                            {item.tshirtDetails && (
+                                                                <div className="ml-14 mt-2 text-xs text-muted-foreground bg-gray-50 p-2 rounded border">
+                                                                    <p>Color: {item.tshirtDetails.color.name} | Size: {item.tshirtDetails.size} | Quality: {item.tshirtDetails.quality} | Side: {item.tshirtDetails.printSide}</p>
+                                                                    {item.tshirtDetails.notes && <p>Notes: {item.tshirtDetails.notes}</p>}
+                                                                    {item.tshirtDetails.designImageBase64 && (
+                                                                        <a href={item.tshirtDetails.designImageBase64} download={`design_${order.id}_${idx}.png`} className="text-primary hover:underline mt-1 inline-block">
+                                                                            Download Design PNG
+                                                                        </a>
+                                                                    )}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>

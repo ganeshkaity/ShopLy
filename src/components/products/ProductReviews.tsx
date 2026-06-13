@@ -90,10 +90,10 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                 productId,
                 userId: user.uid,
                 userName: user.displayName || "Anonymous User",
-                userAvatar: user.photoURL || undefined,
+                userAvatar: user.photoURL || null,
                 rating,
                 comment: comment.trim(),
-                imageBase64: imagePreview || undefined,
+                imageBase64: imagePreview || null,
             });
             
             toast("Review submitted successfully!", "success");

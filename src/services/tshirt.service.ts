@@ -18,6 +18,8 @@ export interface TShirtColor {
     id: string;
     name: string;
     hex: string;
+    frontImageUrl?: string;
+    backImageUrl?: string;
     isActive: boolean;
 }
 

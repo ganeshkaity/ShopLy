@@ -360,77 +360,88 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
 
                     {/* Add to Cart Controls */}
                     <div className="flex flex-col gap-4">
-                        {!isInCart && (
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center rounded-full border border-border px-2">
-                                    <button
-                                        onClick={() => setQuantity(Math.max(product.minOrderQty || 1, quantity - 1))}
-                                        className="p-2 hover:text-primary transition-colors disabled:opacity-30"
-                                        disabled={quantity <= (product.minOrderQty || 1)}
-                                    >
-                                        -
-                                    </button>
-                                    <span className="w-10 text-center font-medium">{quantity}</span>
-                                    <button
-                                        onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                                        className="p-2 hover:text-primary transition-colors disabled:opacity-30"
-                                        disabled={quantity >= product.stock}
-                                    >
-                                        +
-                                    </button>
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                    <p className="text-sm text-muted-foreground">
-                                        {product.stock > 0 ? `${product.stock} items available` : 'Out of stock'}
-                                    </p>
-                                    {product.minOrderQty && product.minOrderQty > 1 && (
-                                        <p className="text-xs font-semibold text-primary">
-                                            Min order quantity: {product.minOrderQty}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="flex flex-col sm:flex-row gap-4">
+                        {product.type === 'REDIRECTION' ? (
                             <Button
-                                className="flex-grow rounded-full text-lg h-12 bg-primary hover:bg-primary/90 text-white"
-                                onClick={handleBuyNow}
-                                disabled={product.stock <= 0}
+                                className="w-full rounded-full text-lg h-12 bg-primary hover:bg-primary/90 text-white"
+                                onClick={() => window.open(product.targetUrl || '#', '_blank', 'noopener noreferrer')}
                             >
                                 Order Now
                             </Button>
-                            {isInCart ? (
-                                <div className="flex-grow flex items-center justify-between rounded-full border border-primary/20 bg-primary/5 px-2 h-12">
-                                    <button
-                                        onClick={handleDecrement}
-                                        className="h-9 w-9 flex items-center justify-center rounded-full bg-white text-primary shadow-sm hover:bg-primary hover:text-white transition-all"
-                                    >
-                                        <Minus className="h-4 w-4" />
-                                    </button>
-                                    <div className="flex flex-col items-center">
-                                        <span className="text-lg font-bold text-primary">{cartItem?.quantity}</span>
-                                        <span className="text-[8px] uppercase font-bold text-primary/60 tracking-tighter -mt-1">In Cart</span>
+                        ) : (
+                            <>
+                                {!isInCart && (
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center rounded-full border border-border px-2">
+                                            <button
+                                                onClick={() => setQuantity(Math.max(product.minOrderQty || 1, quantity - 1))}
+                                                className="p-2 hover:text-primary transition-colors disabled:opacity-30"
+                                                disabled={quantity <= (product.minOrderQty || 1)}
+                                            >
+                                                -
+                                            </button>
+                                            <span className="w-10 text-center font-medium">{quantity}</span>
+                                            <button
+                                                onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                                                className="p-2 hover:text-primary transition-colors disabled:opacity-30"
+                                                disabled={quantity >= product.stock}
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <p className="text-sm text-muted-foreground">
+                                                {product.stock > 0 ? `${product.stock} items available` : 'Out of stock'}
+                                            </p>
+                                            {product.minOrderQty && product.minOrderQty > 1 && (
+                                                <p className="text-xs font-semibold text-primary">
+                                                    Min order quantity: {product.minOrderQty}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
-                                    <button
-                                        onClick={handleIncrement}
-                                        className="h-9 w-9 flex items-center justify-center rounded-full bg-white text-primary shadow-sm hover:bg-primary hover:text-white transition-all"
-                                        disabled={!!cartItem && cartItem.quantity >= product.stock}
+                                )}
+
+                                <div className="flex flex-col sm:flex-row gap-4">
+                                    <Button
+                                        className="flex-grow rounded-full text-lg h-12 bg-primary hover:bg-primary/90 text-white"
+                                        onClick={handleBuyNow}
+                                        disabled={product.stock <= 0}
                                     >
-                                        <PlusIcon className="h-4 w-4" />
-                                    </button>
+                                        Buy Now
+                                    </Button>
+                                    {isInCart ? (
+                                        <div className="flex-grow flex items-center justify-between rounded-full border border-primary/20 bg-primary/5 px-2 h-12">
+                                            <button
+                                                onClick={handleDecrement}
+                                                className="h-9 w-9 flex items-center justify-center rounded-full bg-white text-primary shadow-sm hover:bg-primary hover:text-white transition-all"
+                                            >
+                                                <Minus className="h-4 w-4" />
+                                            </button>
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-lg font-bold text-primary">{cartItem?.quantity}</span>
+                                                <span className="text-[8px] uppercase font-bold text-primary/60 tracking-tighter -mt-1">In Cart</span>
+                                            </div>
+                                            <button
+                                                onClick={handleIncrement}
+                                                className="h-9 w-9 flex items-center justify-center rounded-full bg-white text-primary shadow-sm hover:bg-primary hover:text-white transition-all"
+                                                disabled={!!cartItem && cartItem.quantity >= product.stock}
+                                            >
+                                                <PlusIcon className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <Button
+                                            variant="outline"
+                                            className="flex-grow rounded-full text-lg h-12 border-primary/20 hover:bg-primary/5 text-primary"
+                                            onClick={handleAddToCart}
+                                            disabled={product.stock <= 0}
+                                        >
+                                            <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
+                                        </Button>
+                                    )}
                                 </div>
-                            ) : (
-                                <Button
-                                    variant="outline"
-                                    className="flex-grow rounded-full text-lg h-12 border-primary/20 hover:bg-primary/5 text-primary"
-                                    onClick={handleAddToCart}
-                                    disabled={product.stock <= 0}
-                                >
-                                    <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
-                                </Button>
-                            )}
-                        </div>
+                            </>
+                        )}
                     </div>
 
                     {/* Product Details & Accordions */}

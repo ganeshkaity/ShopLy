@@ -1,44 +1,45 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { getTShirtConfig, createTShirtOrder, TShirtConfig, TShirtColor, TShirtSize, TShirtQuality } from "@/services/tshirt.service";
+import { getTShirtConfig, TShirtConfig, TShirtColor, TShirtSize, TShirtQuality } from "@/services/tshirt.service";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { useCart } from "@/hooks/useCart";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { Input } from "@/components/ui/Input";
 import { cn, formatCurrency } from "@/lib/utils";
-import { Upload, X, Check, Shirt, AlertTriangle, Star, Palette, ChevronRight, Ruler, Package, ArrowRight, ShoppingBag } from "lucide-react";
+import { Upload, X, Check, Shirt, AlertTriangle, Star, Palette, ChevronRight, Ruler, Package, ArrowRight, ShoppingBag, Maximize, Minus, Plus } from "lucide-react";
 
 export default function TShirtPrintingPage() {
     const { user } = useAuth();
     const { toast } = useToast();
+    const { addItem } = useCart();
+    const router = useRouter();
 
     const [config, setConfig] = useState<TShirtConfig | null>(null);
     const [loading, setLoading] = useState(true);
     const [step, setStep] = useState(1);
-    const [submitting, setSubmitting] = useState(false);
 
     // Design
     const [designImage, setDesignImage] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Customization (Scale/Drag)
+    const [scale, setScale] = useState(1);
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+    const containerRef = useRef<HTMLDivElement>(null);
+
     // Selections
     const [selectedColor, setSelectedColor] = useState<TShirtColor | null>(null);
     const [selectedSize, setSelectedSize] = useState<TShirtSize | null>(null);
     const [selectedQuality, setSelectedQuality] = useState<TShirtQuality | null>(null);
+    const [printSide, setPrintSide] = useState<'front' | 'back'>('front');
     const [quantity, setQuantity] = useState(1);
-
-    // Shipping
-    const [shipping, setShipping] = useState({
-        fullName: user?.displayName || "",
-        phone: "",
-        addressLine1: "",
-        addressLine2: "",
-        city: "",
-        state: "",
-        pincode: "",
-    });
+    const [notes, setNotes] = useState("");
 
     useEffect(() => {
         getTShirtConfig().then(cfg => {
@@ -51,12 +52,6 @@ export default function TShirtPrintingPage() {
             if (firstQuality) setSelectedQuality(firstQuality);
         }).finally(() => setLoading(false));
     }, []);
-
-    useEffect(() => {
-        if (user) {
-            setShipping(prev => ({ ...prev, fullName: user.displayName || "" }));
-        }
-    }, [user]);
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -81,40 +76,66 @@ export default function TShirtPrintingPage() {
         e.target.value = "";
     };
 
+    const handlePointerDown = (e: React.PointerEvent) => {
+        setIsDragging(true);
+        setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+        e.currentTarget.setPointerCapture(e.pointerId);
+    };
+
+    const handlePointerMove = (e: React.PointerEvent) => {
+        if (!isDragging || !containerRef.current) return;
+        
+        let newX = e.clientX - dragStart.x;
+        let newY = e.clientY - dragStart.y;
+        
+        // Simple bounds limiting (approximate)
+        const bound = 150;
+        if (newX > bound) newX = bound;
+        if (newX < -bound) newX = -bound;
+        if (newY > bound) newY = bound;
+        if (newY < -bound) newY = -bound;
+
+        setPosition({ x: newX, y: newY });
+    };
+
+    const handlePointerUp = (e: React.PointerEvent) => {
+        setIsDragging(false);
+        e.currentTarget.releasePointerCapture(e.pointerId);
+    };
+
     const totalPrice = (selectedQuality?.price || 0) * quantity;
 
-    const handlePlaceOrder = async () => {
-        if (!config || !user || !selectedColor || !selectedSize || !selectedQuality || !designImage) {
+    const handleProceedToCart = () => {
+        if (!config || !selectedColor || !selectedSize || !selectedQuality || !designImage) {
             toast("Please complete all selections", "error");
             return;
         }
-        if (!shipping.fullName || !shipping.phone || !shipping.addressLine1 || !shipping.city || !shipping.state || !shipping.pincode) {
-            toast("Please fill all shipping details", "error");
-            return;
-        }
-        setSubmitting(true);
-        try {
-            await createTShirtOrder({
-                userId: user.uid,
-                userName: user.displayName || "User",
-                userEmail: user.email || "",
-                phone: shipping.phone,
+
+        const tshirtId = `tshirt_custom_${Date.now()}`;
+        
+        // Use a generated snapshot or the uploaded design as thumbnail
+        const thumbnail = designImage;
+
+        addItem({
+            productId: tshirtId,
+            name: `Custom T-Shirt - ${selectedColor.name}`,
+            price: selectedQuality.price,
+            image: thumbnail,
+            quantity: quantity,
+            category: 'T-Shirts',
+            type: 'TSHIRT',
+            tshirtDetails: {
                 designImageBase64: designImage,
-                color: selectedColor,
-                size: selectedSize,
-                quality: selectedQuality,
-                quantity,
-                totalPrice,
-                shippingAddress: shipping,
-                status: "Pending",
-            });
-            toast("Order placed! We'll contact you soon.", "success");
-            setStep(5); // success step
-        } catch (e) {
-            toast("Failed to place order", "error");
-        } finally {
-            setSubmitting(false);
-        }
+                color: { name: selectedColor.name, hex: selectedColor.hex },
+                size: selectedSize.label,
+                quality: selectedQuality.name,
+                printSide,
+                notes: notes.trim()
+            }
+        });
+
+        toast("T-Shirt added to cart!", "success");
+        router.push("/checkout");
     };
 
     if (loading) return <div className="flex justify-center py-32"><Spinner size="lg" /></div>;
@@ -130,8 +151,11 @@ export default function TShirtPrintingPage() {
         { num: 1, label: "Design", icon: Upload },
         { num: 2, label: "Customize", icon: Palette },
         { num: 3, label: "Quality", icon: Star },
-        { num: 4, label: "Checkout", icon: ShoppingBag },
     ];
+
+    const currentTshirtImage = selectedColor 
+        ? (printSide === 'front' ? selectedColor.frontImageUrl : selectedColor.backImageUrl)
+        : null;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-rose-50 via-white to-purple-50/30">
@@ -149,29 +173,27 @@ export default function TShirtPrintingPage() {
 
             <div className="container-custom py-12">
                 {/* Step Indicator */}
-                {step < 5 && (
-                    <div className="flex items-center justify-center gap-2 mb-10">
-                        {steps.map((s, idx) => (
-                            <React.Fragment key={s.num}>
-                                <button
-                                    onClick={() => step > s.num && setStep(s.num)}
-                                    className={cn(
-                                        "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300",
-                                        step === s.num ? "bg-primary text-white shadow-lg shadow-primary/30 scale-105" :
-                                            step > s.num ? "bg-primary/20 text-primary cursor-pointer hover:bg-primary/30" :
-                                                "bg-gray-100 text-muted-foreground"
-                                    )}
-                                >
-                                    {step > s.num ? <Check className="h-4 w-4" /> : <s.icon className="h-4 w-4" />}
-                                    <span className="hidden sm:block">{s.label}</span>
-                                </button>
-                                {idx < steps.length - 1 && (
-                                    <ChevronRight className={cn("h-4 w-4 shrink-0", step > s.num ? "text-primary" : "text-gray-300")} />
+                <div className="flex items-center justify-center gap-2 mb-10">
+                    {steps.map((s, idx) => (
+                        <React.Fragment key={s.num}>
+                            <button
+                                onClick={() => step > s.num && setStep(s.num)}
+                                className={cn(
+                                    "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300",
+                                    step === s.num ? "bg-primary text-white shadow-lg shadow-primary/30 scale-105" :
+                                        step > s.num ? "bg-primary/20 text-primary cursor-pointer hover:bg-primary/30" :
+                                            "bg-gray-100 text-muted-foreground"
                                 )}
-                            </React.Fragment>
-                        ))}
-                    </div>
-                )}
+                            >
+                                {step > s.num ? <Check className="h-4 w-4" /> : <s.icon className="h-4 w-4" />}
+                                <span className="hidden sm:block">{s.label}</span>
+                            </button>
+                            {idx < steps.length - 1 && (
+                                <ChevronRight className={cn("h-4 w-4 shrink-0", step > s.num ? "text-primary" : "text-gray-300")} />
+                            )}
+                        </React.Fragment>
+                    ))}
+                </div>
 
                 {/* STEP 1: Upload Design */}
                 {step === 1 && (
@@ -182,29 +204,13 @@ export default function TShirtPrintingPage() {
                         </div>
 
                         <div className="relative">
-                            {/* T-shirt mockup */}
-                            <div className="relative mx-auto w-72 h-80 select-none">
-                                {/* T-shirt SVG shape */}
-                                <svg viewBox="0 0 300 340" className="absolute inset-0 w-full h-full drop-shadow-2xl" style={{ filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.15))" }}>
-                                    <path
-                                        d="M100,20 L70,10 L20,50 L50,80 L50,320 L250,320 L250,80 L280,50 L230,10 L200,20 C190,60 110,60 100,20 Z"
-                                        fill={selectedColor?.hex || "#FFFFFF"}
-                                        stroke="#e5e7eb"
-                                        strokeWidth="2"
-                                    />
-                                </svg>
-                                {/* Design overlay */}
-                                {designImage && (
-                                    <div className="absolute" style={{ top: "30%", left: "25%", width: "50%", height: "40%" }}>
-                                        <img src={designImage} alt="Design" className="w-full h-full object-contain" />
-                                    </div>
-                                )}
-                            </div>
-
                             {/* Upload area */}
                             <div className="mt-8">
                                 {designImage ? (
                                     <div className="flex flex-col items-center gap-4">
+                                        <div className="relative w-48 h-48 border border-border rounded-xl bg-gray-50 flex items-center justify-center p-4">
+                                            <img src={designImage} alt="Design" className="max-w-full max-h-full object-contain drop-shadow-xl" />
+                                        </div>
                                         <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-2xl px-5 py-3">
                                             <Check className="h-5 w-5 text-green-600" />
                                             <span className="font-semibold text-green-700">Design uploaded!</span>
@@ -248,80 +254,140 @@ export default function TShirtPrintingPage() {
                     </div>
                 )}
 
-                {/* STEP 2: Color & Size */}
+                {/* STEP 2: Color & Size & Position */}
                 {step === 2 && (
-                    <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+                    <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
                         <div className="text-center">
-                            <h2 className="text-2xl font-bold font-serif">Choose Color & Size</h2>
-                            <p className="text-muted-foreground mt-1">Pick the shirt color and your size</p>
+                            <h2 className="text-2xl font-bold font-serif">Customize Your Shirt</h2>
+                            <p className="text-muted-foreground mt-1">Drag and resize your design on the shirt</p>
                         </div>
 
-                        {/* Live preview */}
-                        <div className="flex justify-center">
-                            <div className="relative w-44 h-48">
-                                <svg viewBox="0 0 300 340" className="absolute inset-0 w-full h-full drop-shadow-xl transition-all duration-500">
-                                    <path
-                                        d="M100,20 L70,10 L20,50 L50,80 L50,320 L250,320 L250,80 L280,50 L230,10 L200,20 C190,60 110,60 100,20 Z"
-                                        fill={selectedColor?.hex || "#FFFFFF"}
-                                        stroke="#e5e7eb"
-                                        strokeWidth="2"
-                                    />
-                                </svg>
-                                {designImage && (
-                                    <div className="absolute" style={{ top: "30%", left: "25%", width: "50%", height: "40%" }}>
-                                        <img src={designImage} alt="Design" className="w-full h-full object-contain" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+                            {/* Left: Interactive Preview */}
+                            <div className="relative flex flex-col items-center gap-4">
+                                <div 
+                                    className="relative w-[300px] h-[360px] bg-white rounded-2xl border shadow-sm flex items-center justify-center overflow-hidden touch-none"
+                                    ref={containerRef}
+                                >
+                                    {currentTshirtImage ? (
+                                        <img src={currentTshirtImage} alt="T-Shirt" className="w-full h-full object-cover pointer-events-none" />
+                                    ) : (
+                                        <svg viewBox="0 0 300 340" className="absolute inset-0 w-full h-full drop-shadow-xl transition-all duration-500 pointer-events-none">
+                                            <path
+                                                d="M100,20 L70,10 L20,50 L50,80 L50,320 L250,320 L250,80 L280,50 L230,10 L200,20 C190,60 110,60 100,20 Z"
+                                                fill={selectedColor?.hex || "#FFFFFF"}
+                                                stroke="#e5e7eb"
+                                                strokeWidth="2"
+                                            />
+                                        </svg>
+                                    )}
+
+                                    {/* Draggable Design Overlay */}
+                                    {designImage && (
+                                        <div 
+                                            className={cn(
+                                                "absolute cursor-move transition-transform ease-out",
+                                                isDragging ? "duration-0" : "duration-200"
+                                            )}
+                                            style={{
+                                                top: "30%",
+                                                left: "25%",
+                                                width: "50%",
+                                                height: "40%",
+                                                transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                                            }}
+                                            onPointerDown={handlePointerDown}
+                                            onPointerMove={handlePointerMove}
+                                            onPointerUp={handlePointerUp}
+                                            onPointerCancel={handlePointerUp}
+                                        >
+                                            <div className="relative w-full h-full p-2 border-2 border-dashed border-transparent hover:border-primary/50">
+                                                <img src={designImage} alt="Design" className="w-full h-full object-contain pointer-events-none" />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Scale Controls */}
+                                <div className="flex items-center gap-4 bg-white px-6 py-3 rounded-full border shadow-sm">
+                                    <button onClick={() => setScale(Math.max(0.2, scale - 0.1))} className="p-1 hover:text-primary"><Minus className="h-5 w-5" /></button>
+                                    <span className="text-sm font-bold w-12 text-center">{Math.round(scale * 100)}%</span>
+                                    <button onClick={() => setScale(Math.min(2.5, scale + 0.1))} className="p-1 hover:text-primary"><Plus className="h-5 w-5" /></button>
+                                </div>
+                            </div>
+
+                            {/* Right: Options */}
+                            <div className="space-y-8">
+                                {/* Print Side */}
+                                <div>
+                                    <label className="block text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                                        Print Side
+                                    </label>
+                                    <div className="flex gap-4">
+                                        <button 
+                                            onClick={() => setPrintSide('front')}
+                                            className={cn("flex-1 py-3 rounded-xl border-2 font-bold text-sm transition-all", printSide === 'front' ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground")}
+                                        >
+                                            Front Print
+                                        </button>
+                                        <button 
+                                            onClick={() => setPrintSide('back')}
+                                            className={cn("flex-1 py-3 rounded-xl border-2 font-bold text-sm transition-all", printSide === 'back' ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground")}
+                                        >
+                                            Back Print
+                                        </button>
                                     </div>
-                                )}
+                                </div>
+
+                                {/* Colors */}
+                                <div>
+                                    <label className="block text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                                        <Palette className="h-4 w-4 inline mr-2" />Color: <span className="text-foreground">{selectedColor?.name}</span>
+                                    </label>
+                                    <div className="flex flex-wrap gap-3">
+                                        {config!.colors.filter(c => c.isActive).map(color => (
+                                            <button
+                                                key={color.id}
+                                                onClick={() => setSelectedColor(color)}
+                                                title={color.name}
+                                                className={cn(
+                                                    "h-11 w-11 rounded-full border-4 transition-all duration-200 hover:scale-110",
+                                                    selectedColor?.id === color.id
+                                                        ? "border-primary scale-110 shadow-lg shadow-primary/30"
+                                                        : "border-transparent hover:border-gray-300"
+                                                )}
+                                                style={{ backgroundColor: color.hex, outline: color.hex === "#FFFFFF" ? "1px solid #e5e7eb" : "none" }}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Sizes */}
+                                <div>
+                                    <label className="block text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                                        <Ruler className="h-4 w-4 inline mr-2" />Size: <span className="text-foreground">{selectedSize?.label}</span>
+                                    </label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {config!.sizes.filter(s => s.isActive).map(size => (
+                                            <button
+                                                key={size.id}
+                                                onClick={() => setSelectedSize(size)}
+                                                className={cn(
+                                                    "min-w-[52px] px-4 py-2.5 rounded-xl border-2 font-bold text-sm transition-all duration-200 hover:scale-105",
+                                                    selectedSize?.id === size.id
+                                                        ? "border-primary bg-primary text-white shadow-md shadow-primary/30"
+                                                        : "border-border text-muted-foreground hover:border-primary/50 hover:text-primary"
+                                                )}
+                                            >
+                                                {size.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Colors */}
-                        <div>
-                            <label className="block text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">
-                                <Palette className="h-4 w-4 inline mr-2" />Color: <span className="text-foreground">{selectedColor?.name}</span>
-                            </label>
-                            <div className="flex flex-wrap gap-3">
-                                {config!.colors.filter(c => c.isActive).map(color => (
-                                    <button
-                                        key={color.id}
-                                        onClick={() => setSelectedColor(color)}
-                                        title={color.name}
-                                        className={cn(
-                                            "h-11 w-11 rounded-full border-4 transition-all duration-200 hover:scale-110",
-                                            selectedColor?.id === color.id
-                                                ? "border-primary scale-110 shadow-lg shadow-primary/30"
-                                                : "border-transparent hover:border-gray-300"
-                                        )}
-                                        style={{ backgroundColor: color.hex, outline: color.hex === "#FFFFFF" ? "1px solid #e5e7eb" : "none" }}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Sizes */}
-                        <div>
-                            <label className="block text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">
-                                <Ruler className="h-4 w-4 inline mr-2" />Size: <span className="text-foreground">{selectedSize?.label}</span>
-                            </label>
-                            <div className="flex flex-wrap gap-2">
-                                {config!.sizes.filter(s => s.isActive).map(size => (
-                                    <button
-                                        key={size.id}
-                                        onClick={() => setSelectedSize(size)}
-                                        className={cn(
-                                            "min-w-[52px] px-4 py-2.5 rounded-xl border-2 font-bold text-sm transition-all duration-200 hover:scale-105",
-                                            selectedSize?.id === size.id
-                                                ? "border-primary bg-primary text-white shadow-md shadow-primary/30"
-                                                : "border-border text-muted-foreground hover:border-primary/50 hover:text-primary"
-                                        )}
-                                    >
-                                        {size.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="flex justify-between">
+                        <div className="flex justify-between pt-8 border-t">
                             <Button variant="outline" className="rounded-full px-6" onClick={() => setStep(1)}>Back</Button>
                             <Button className="rounded-full px-8 gap-2" onClick={() => setStep(3)} disabled={!selectedColor || !selectedSize}>
                                 Next: Quality <ArrowRight className="h-4 w-4" />
@@ -330,9 +396,9 @@ export default function TShirtPrintingPage() {
                     </div>
                 )}
 
-                {/* STEP 3: Quality */}
+                {/* STEP 3: Quality & Finalize */}
                 {step === 3 && (
-                    <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+                    <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
                         <div className="text-center">
                             <h2 className="text-2xl font-bold font-serif">Select T-Shirt Quality</h2>
                             <p className="text-muted-foreground mt-1">Choose the quality tier that suits you best</p>
@@ -368,108 +434,67 @@ export default function TShirtPrintingPage() {
                             ))}
                         </div>
 
-                        {/* Quantity */}
-                        <div className="flex items-center gap-4 bg-gray-50 rounded-2xl p-4">
-                            <span className="font-semibold text-sm">Quantity:</span>
-                            <div className="flex items-center rounded-full border border-border bg-white px-2">
-                                <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-2 hover:text-primary transition-colors">-</button>
-                                <span className="w-10 text-center font-bold">{quantity}</span>
-                                <button onClick={() => setQuantity(Math.min(50, quantity + 1))} className="p-2 hover:text-primary transition-colors">+</button>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                            {/* Notes */}
+                            <div className="space-y-3">
+                                <label className="block text-sm font-bold uppercase tracking-wider text-muted-foreground">Notes for Seller (Optional)</label>
+                                <textarea
+                                    className="w-full rounded-2xl border border-border p-4 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none shadow-sm"
+                                    rows={4}
+                                    placeholder="E.g., Please ensure the design is centered high on the chest..."
+                                    value={notes}
+                                    onChange={(e) => setNotes(e.target.value)}
+                                />
                             </div>
-                            <div className="ml-auto">
-                                <span className="text-sm text-muted-foreground">Total: </span>
-                                <span className="text-xl font-extrabold text-primary">{formatCurrency(totalPrice)}</span>
+
+                            {/* Summary & Checkout */}
+                            <div className="bg-white rounded-3xl border p-6 shadow-sm space-y-6">
+                                {/* Order Stopped Banner */}
+                                {config!.isOrderStopped && (
+                                    <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 flex gap-3">
+                                        <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
+                                        <div>
+                                            <p className="font-bold text-amber-800 text-sm">Orders Temporarily Paused</p>
+                                            <p className="text-amber-700 text-xs mt-1">{config!.temporaryStopMessage}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            
+                                <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Summary</h3>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between"><span className="text-muted-foreground">Color</span> <span className="font-semibold">{selectedColor?.name}</span></div>
+                                    <div className="flex justify-between"><span className="text-muted-foreground">Size</span> <span className="font-semibold">{selectedSize?.label}</span></div>
+                                    <div className="flex justify-between"><span className="text-muted-foreground">Quality</span> <span className="font-semibold">{selectedQuality?.name}</span></div>
+                                    <div className="flex justify-between"><span className="text-muted-foreground">Print Side</span> <span className="font-semibold capitalize">{printSide}</span></div>
+                                </div>
+                                <hr />
+                                <div className="flex items-center justify-between">
+                                    <span className="font-semibold text-sm">Quantity:</span>
+                                    <div className="flex items-center rounded-full border border-border bg-gray-50 px-2 h-10">
+                                        <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-8 hover:text-primary transition-colors">-</button>
+                                        <span className="w-8 text-center font-bold">{quantity}</span>
+                                        <button onClick={() => setQuantity(Math.min(50, quantity + 1))} className="w-8 hover:text-primary transition-colors">+</button>
+                                    </div>
+                                </div>
+                                <div className="flex items-end justify-between pt-2">
+                                    <span className="text-muted-foreground font-medium">Total</span>
+                                    <span className="text-3xl font-extrabold text-primary">{formatCurrency(totalPrice)}</span>
+                                </div>
+
+                                <Button
+                                    className="w-full rounded-full h-12 text-lg gap-2"
+                                    onClick={handleProceedToCart}
+                                    disabled={config!.isOrderStopped || !selectedQuality}
+                                >
+                                    <ShoppingBag className="h-5 w-5" />
+                                    {config!.isOrderStopped ? "Orders Paused" : "Add to Cart & Checkout"}
+                                </Button>
                             </div>
                         </div>
 
-                        <div className="flex justify-between">
+                        <div className="flex justify-start">
                             <Button variant="outline" className="rounded-full px-6" onClick={() => setStep(2)}>Back</Button>
-                            <Button className="rounded-full px-8 gap-2" onClick={() => setStep(4)} disabled={!selectedQuality}>
-                                Next: Checkout <ArrowRight className="h-4 w-4" />
-                            </Button>
                         </div>
-                    </div>
-                )}
-
-                {/* STEP 4: Checkout */}
-                {step === 4 && (
-                    <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
-                        <div className="text-center">
-                            <h2 className="text-2xl font-bold font-serif">Shipping Details</h2>
-                            <p className="text-muted-foreground mt-1">Where should we deliver your shirt?</p>
-                        </div>
-
-                        {/* Order Stopped Banner */}
-                        {config!.isOrderStopped && (
-                            <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 flex gap-4">
-                                <AlertTriangle className="h-6 w-6 text-amber-500 shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="font-bold text-amber-800">Orders Temporarily Paused</p>
-                                    <p className="text-amber-700 text-sm mt-1">{config!.temporaryStopMessage}</p>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Order summary */}
-                        <div className="bg-white rounded-3xl border p-5 space-y-3 shadow-sm">
-                            <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Order Summary</h3>
-                            <div className="flex items-center gap-4">
-                                <div className="relative w-14 h-14">
-                                    <svg viewBox="0 0 300 340" className="w-full h-full">
-                                        <path d="M100,20 L70,10 L20,50 L50,80 L50,320 L250,320 L250,80 L280,50 L230,10 L200,20 C190,60 110,60 100,20 Z" fill={selectedColor?.hex || "#fff"} stroke="#e5e7eb" strokeWidth="4" />
-                                    </svg>
-                                    {designImage && <img src={designImage} alt="Design" className="absolute" style={{ top: "30%", left: "25%", width: "50%", height: "40%", objectFit: "contain" }} />}
-                                </div>
-                                <div className="flex-grow text-sm space-y-1">
-                                    <p><b>Color:</b> {selectedColor?.name} | <b>Size:</b> {selectedSize?.label} | <b>Qty:</b> {quantity}</p>
-                                    <p><b>Quality:</b> {selectedQuality?.name}</p>
-                                    <p className="text-primary font-bold text-lg">{formatCurrency(totalPrice)}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Shipping form */}
-                        <div className="bg-white rounded-3xl border p-6 shadow-sm space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <Input label="Full Name *" value={shipping.fullName} onChange={(e) => setShipping({ ...shipping, fullName: e.target.value })} />
-                                <Input label="Phone *" value={shipping.phone} onChange={(e) => setShipping({ ...shipping, phone: e.target.value })} />
-                            </div>
-                            <Input label="Address Line 1 *" value={shipping.addressLine1} onChange={(e) => setShipping({ ...shipping, addressLine1: e.target.value })} />
-                            <Input label="Address Line 2" value={shipping.addressLine2} onChange={(e) => setShipping({ ...shipping, addressLine2: e.target.value })} />
-                            <div className="grid grid-cols-3 gap-4">
-                                <Input label="City *" value={shipping.city} onChange={(e) => setShipping({ ...shipping, city: e.target.value })} />
-                                <Input label="State *" value={shipping.state} onChange={(e) => setShipping({ ...shipping, state: e.target.value })} />
-                                <Input label="Pincode *" value={shipping.pincode} onChange={(e) => setShipping({ ...shipping, pincode: e.target.value })} />
-                            </div>
-                        </div>
-
-                        <div className="flex justify-between">
-                            <Button variant="outline" className="rounded-full px-6" onClick={() => setStep(3)}>Back</Button>
-                            <Button
-                                className="rounded-full px-8 gap-2"
-                                onClick={handlePlaceOrder}
-                                isLoading={submitting}
-                                disabled={config!.isOrderStopped}
-                            >
-                                {config!.isOrderStopped ? "Orders Paused" : "Place Order"}
-                            </Button>
-                        </div>
-                    </div>
-                )}
-
-                {/* STEP 5: Success */}
-                {step === 5 && (
-                    <div className="max-w-lg mx-auto text-center animate-in fade-in zoom-in duration-500 py-12 space-y-6">
-                        <div className="h-24 w-24 bg-green-100 rounded-full flex items-center justify-center mx-auto animate-bounce">
-                            <Check className="h-12 w-12 text-green-600" />
-                        </div>
-                        <h2 className="text-3xl font-serif font-bold">Order Placed! 🎉</h2>
-                        <p className="text-muted-foreground text-lg">Your custom T-shirt order has been received. Our team will review it and reach out to you soon!</p>
-                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
-                            <AlertTriangle className="h-4 w-4 inline mr-2" />
-                            Note: Orders are currently reviewed manually. You'll be contacted at the email or phone you provided.
-                        </div>
-                        <Button className="rounded-full px-8" onClick={() => window.location.href = "/"}>Back to Home</Button>
                     </div>
                 )}
             </div>

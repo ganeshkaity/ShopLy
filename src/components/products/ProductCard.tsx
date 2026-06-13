@@ -78,13 +78,11 @@ export function ProductCard({ product, className }: ProductCardProps) {
     const rating = 4.7;
 
     const isRedirection = product.type === 'REDIRECTION';
-    const productHref = isRedirection ? (product.targetUrl || '#') : `/products/${product.slug}`;
-    const linkProps = isRedirection ? { target: "_blank", rel: "noopener noreferrer" } : {};
 
     return (
         <Card hover className={cn("group flex flex-col h-full overflow-visible relative", className)}>
             <div className="relative aspect-square overflow-hidden bg-white">
-                <Link href={productHref} {...linkProps} className="block h-full w-full p-0">
+                <Link href={`/products/${product.slug}`} className="block h-full w-full p-0">
                     {product.images?.[0] ? (
                         <Image
                             src={product.images[0]}
@@ -126,39 +124,41 @@ export function ProductCard({ product, className }: ProductCardProps) {
                     <Heart className={cn("h-4 w-4", isInWishlist(product.id) && "fill-current")} />
                 </Button>
 
-                {/* Add to Cart Button Overlay */}
-                <div className="absolute bottom-2 right-2 z-10">
-                    {isInCart ? (
-                        <div className="flex items-center gap-1 rounded-full border border-primary/20 bg-white shadow-md p-0.5">
-                            <button
-                                onClick={handleDecrement}
-                                className="flex h-5 w-5 items-center justify-center rounded-full text-primary hover:bg-primary/5 transition-colors"
+                {/* Add to Cart Button Overlay - Hidden for REDIRECTION type */}
+                {!isRedirection && (
+                    <div className="absolute bottom-2 right-2 z-10">
+                        {isInCart ? (
+                            <div className="flex items-center gap-1 rounded-full border border-primary/20 bg-white shadow-md p-0.5">
+                                <button
+                                    onClick={handleDecrement}
+                                    className="flex h-5 w-5 items-center justify-center rounded-full text-primary hover:bg-primary/5 transition-colors"
+                                >
+                                    <Minus className="h-2.5 w-2.5" />
+                                </button>
+                                <span className="min-w-[0.7rem] text-center text-[10px] font-bold text-primary">
+                                    {cartItem?.quantity}
+                                </span>
+                                <button
+                                    onClick={handleIncrement}
+                                    className="flex h-5 w-5 items-center justify-center rounded-full text-primary hover:bg-primary/5 transition-colors"
+                                    disabled={cartItem && cartItem.quantity >= product.stock}
+                                >
+                                    <Plus className="h-2.5 w-2.5" />
+                                </button>
+                            </div>
+                        ) : (
+                            <Button
+                                size="icon"
+                                variant="secondary"
+                                className="h-8 w-8 rounded-full bg-white shadow-md text-primary hover:bg-primary hover:text-white transition-all transform group-hover:scale-110"
+                                onClick={handleAddToCart}
+                                disabled={product.stock <= 0}
                             >
-                                <Minus className="h-2.5 w-2.5" />
-                            </button>
-                            <span className="min-w-[0.7rem] text-center text-[10px] font-bold text-primary">
-                                {cartItem?.quantity}
-                            </span>
-                            <button
-                                onClick={handleIncrement}
-                                className="flex h-5 w-5 items-center justify-center rounded-full text-primary hover:bg-primary/5 transition-colors"
-                                disabled={cartItem && cartItem.quantity >= product.stock}
-                            >
-                                <Plus className="h-2.5 w-2.5" />
-                            </button>
-                        </div>
-                    ) : (
-                        <Button
-                            size="icon"
-                            variant="secondary"
-                            className="h-8 w-8 rounded-full bg-white shadow-md text-primary hover:bg-primary hover:text-white transition-all transform group-hover:scale-110"
-                            onClick={handleAddToCart}
-                            disabled={product.stock <= 0}
-                        >
-                            <ShoppingCart className="h-4 w-4" />
-                        </Button>
-                    )}
-                </div>
+                                <ShoppingCart className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Ribbon Badge (Moved outside overflow-hidden div) */}
@@ -175,7 +175,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
                 <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
                     {product.category}
                 </p>
-                <Link href={productHref} {...linkProps} className="hover:text-primary transition-colors">
+                <Link href={`/products/${product.slug}`} className="hover:text-primary transition-colors">
                     <h3 className="text-sm font-medium line-clamp-1">
                         {product.name}
                     </h3>

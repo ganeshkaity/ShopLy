@@ -25,7 +25,7 @@ export interface ShippingAddress {
     phone: string;
 }
 
-export type ProductType = 'PHYSICAL' | 'DIGITAL' | 'REDIRECTION';
+export type ProductType = 'PHYSICAL' | 'DIGITAL' | 'REDIRECTION' | 'TSHIRT';
 
 export interface VariantOption {
     id: string;
@@ -85,6 +85,14 @@ export interface CartItem {
     stock?: number;
     compareAtPrice?: number;
     selectedVariants?: Record<string, string>; // { "Size": "M", "Color": "Red" }
+    tshirtDetails?: {
+        designImageBase64: string;
+        color: { name: string; hex: string };
+        size: string;
+        quality: string;
+        printSide: 'front' | 'back';
+        notes?: string;
+    };
 }
 
 export interface WishlistItem {
@@ -114,6 +122,14 @@ export interface OrderItem {
     image: string;
     type?: ProductType;
     slug?: string;
+    tshirtDetails?: {
+        designImageBase64: string;
+        color: { name: string; hex: string };
+        size: string;
+        quality: string;
+        printSide: 'front' | 'back';
+        notes?: string;
+    };
 }
 
 export interface Order {
@@ -129,6 +145,7 @@ export interface Order {
     discount?: number;
     couponCode?: string;
     status: OrderStatus;
+    hasTShirt?: boolean;
     statusHistory?: StatusUpdate[];
     paymentId?: string;
     razorpayOrderId?: string;
@@ -257,9 +274,9 @@ export interface ProductReview {
     productId: string;
     userId: string;
     userName: string;
-    userAvatar?: string;
+    userAvatar?: string | null;
     rating: number; // 1-5
     comment: string;
-    imageBase64?: string; // Storing as base64 per user request
+    imageBase64?: string | null; // Storing as base64 per user request
     createdAt: string;
 }

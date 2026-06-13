@@ -64,18 +64,53 @@ export default function AdminTShirtPrintPage() {
         }
     };
 
+    const uploadToImgBB = async (file: File): Promise<string> => {
+        const formData = new FormData();
+        formData.append("image", file);
+        const res = await fetch(`https://api.imgbb.com/1/upload?key=f836d90a7d863714c3ebfd67412a5cbf`, {
+            method: "POST",
+            body: formData,
+        });
+        if (!res.ok) throw new Error("Failed to upload to ImgBB");
+        const data = await res.json();
+        return data.data.url;
+    };
+
     const handleQualityImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, qualityId: string) => {
         const file = e.target.files?.[0];
         if (!file || !config) return;
         setUploadingImage(qualityId);
         try {
             const compressed = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 800, useWebWorker: true });
-            const url = await uploadFile(PRODUCT_IMAGES_BUCKET, `tshirt_quality_${qualityId}_${Date.now()}.webp`, compressed, 'image/webp');
+            const url = await uploadToImgBB(compressed);
             setConfig(prev => prev ? {
                 ...prev,
                 qualities: prev.qualities.map(q => q.id === qualityId ? { ...q, imageUrl: url } : q)
             } : prev);
             toast("Image uploaded", "success");
+        } catch {
+            toast("Failed to upload image", "error");
+        } finally {
+            setUploadingImage(null);
+            e.target.value = "";
+        }
+    };
+
+    const handleColorImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, colorId: string, side: 'front' | 'back') => {
+        const file = e.target.files?.[0];
+        if (!file || !config) return;
+        setUploadingImage(`${colorId}-${side}`);
+        try {
+            const compressed = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 800, useWebWorker: true });
+            const url = await uploadToImgBB(compressed);
+            setConfig(prev => prev ? {
+                ...prev,
+                colors: prev.colors.map(c => {
+                    if (c.id !== colorId) return c;
+                    return side === 'front' ? { ...c, frontImageUrl: url } : { ...c, backImageUrl: url };
+                })
+            } : prev);
+            toast(`${side === 'front' ? 'Front' : 'Back'} image uploaded`, "success");
         } catch {
             toast("Failed to upload image", "error");
         } finally {
@@ -254,11 +289,61 @@ export default function AdminTShirtPrintPage() {
                                             />
                                         </div>
                                     </div>
-                                    <label className="flex items-center gap-2 cursor-pointer">
+                                    <div className="grid grid-cols-2 gap-4 mt-2">
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium text-muted-foreground">Front Image</label>
+                                            {color.frontImageUrl ? (
+                                                <div className="relative rounded-lg overflow-hidden border border-border h-24">
+                                                    <img src={color.frontImageUrl} alt="Front" className="w-full h-full object-cover" />
+                                                    <button
+                                                        onClick={() => setConfig({ ...config, colors: config.colors.map((c, i) => i === idx ? { ...c, frontImageUrl: undefined } : c) })}
+                                                        className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed rounded-lg cursor-pointer hover:bg-accent transition-colors">
+                                                    {uploadingImage === `${color.id}-front` ? <Spinner size="sm" /> : (
+                                                        <>
+                                                            <Upload className="h-4 w-4 text-muted-foreground mb-1" />
+                                                            <span className="text-[10px] text-muted-foreground">Upload Front</span>
+                                                        </>
+                                                    )}
+                                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleColorImageUpload(e, color.id, 'front')} />
+                                                </label>
+                                            )}
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-medium text-muted-foreground">Back Image</label>
+                                            {color.backImageUrl ? (
+                                                <div className="relative rounded-lg overflow-hidden border border-border h-24">
+                                                    <img src={color.backImageUrl} alt="Back" className="w-full h-full object-cover" />
+                                                    <button
+                                                        onClick={() => setConfig({ ...config, colors: config.colors.map((c, i) => i === idx ? { ...c, backImageUrl: undefined } : c) })}
+                                                        className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed rounded-lg cursor-pointer hover:bg-accent transition-colors">
+                                                    {uploadingImage === `${color.id}-back` ? <Spinner size="sm" /> : (
+                                                        <>
+                                                            <Upload className="h-4 w-4 text-muted-foreground mb-1" />
+                                                            <span className="text-[10px] text-muted-foreground">Upload Back</span>
+                                                        </>
+                                                    )}
+                                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleColorImageUpload(e, color.id, 'back')} />
+                                                </label>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <label className="flex items-center gap-2 cursor-pointer mt-2">
                                         <input
                                             type="checkbox"
                                             checked={color.isActive}
-                                            onChange={(e) => setConfig({ ...config, colors: config.colors.map((c, i) => i === idx ? { ...c, isActive: e.target.checked } : c) })}
+                                            onChange={(e) => setConfig({ ...config, colors: config.colors.map((c, i) => i === idx ? { ...c, isActive: e.target.checked } : c) }) }
                                             className="rounded border-gray-300 text-primary"
                                         />
                                         <span className="text-sm font-medium">Active</span>

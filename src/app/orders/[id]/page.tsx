@@ -213,9 +213,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                             <div className="divide-y divide-border">
                                 {order.items?.map((item, idx) => (
                                     <div key={idx} className="flex items-center gap-4 py-4">
-                                        <div className="relative h-16 w-16 rounded-lg overflow-hidden bg-gray-50 shrink-0">
+                                        <div className="relative h-16 w-16 rounded-lg overflow-hidden bg-gray-50 shrink-0 border">
                                             {item.image ? (
-                                                <Image src={item.image} alt={item.name} fill className="object-cover" unoptimized />
+                                                <Image src={item.image} alt={item.name} fill className="object-contain p-1" unoptimized />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">No img</div>
                                             )}
@@ -223,6 +223,15 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                         <div className="flex-grow">
                                             <p className="font-medium">{item.name}</p>
                                             <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                                            {item.tshirtDetails && (
+                                                <div className="mt-2 text-xs text-muted-foreground bg-gray-50 p-2 rounded-lg border">
+                                                    <p><span className="font-semibold">Color:</span> {item.tshirtDetails.color.name}</p>
+                                                    <p><span className="font-semibold">Size:</span> {item.tshirtDetails.size}</p>
+                                                    <p><span className="font-semibold">Quality:</span> {item.tshirtDetails.quality}</p>
+                                                    <p><span className="font-semibold">Print Side:</span> <span className="capitalize">{item.tshirtDetails.printSide}</span></p>
+                                                    {item.tshirtDetails.notes && <p><span className="font-semibold">Notes:</span> {item.tshirtDetails.notes}</p>}
+                                                </div>
+                                            )}
                                         </div>
                                         <p className="font-bold">{formatCurrency(item.price * item.quantity)}</p>
                                     </div>

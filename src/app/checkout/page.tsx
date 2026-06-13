@@ -167,6 +167,8 @@ export default function CheckoutPage() {
                                     price: item.price,
                                     quantity: item.quantity,
                                     image: item.image,
+                                    ...(item.type ? { type: item.type } : {}),
+                                    ...(item.tshirtDetails ? { tshirtDetails: item.tshirtDetails } : {}),
                                 })),
                                 shippingAddress: address,
                                 totalAmount: grandTotal,
@@ -174,6 +176,7 @@ export default function CheckoutPage() {
                                 status: "CONFIRMED",
                                 paymentId: response.razorpay_payment_id,
                                 razorpayOrderId: response.razorpay_order_id,
+                                hasTShirt: items.some(item => item.type === 'TSHIRT'),
                             });
                             if (buyNowItem) {
                                 setBuyNowItem(null);
