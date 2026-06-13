@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -10,7 +10,7 @@ import { APP_NAME } from "@/constants";
 import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function AuthPage() {
+function AuthForm() {
     const searchParams = useSearchParams();
     const mode = searchParams.get("mode");
     const [isLogin, setIsLogin] = useState(mode !== "signup");
@@ -242,5 +242,13 @@ export default function AuthPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function AuthPage() {
+    return (
+        <Suspense fallback={<div className="flex min-h-[calc(100vh-64px)] items-center justify-center">Loading...</div>}>
+            <AuthForm />
+        </Suspense>
     );
 }
