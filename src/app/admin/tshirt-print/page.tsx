@@ -289,57 +289,7 @@ export default function AdminTShirtPrintPage() {
                                             />
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4 mt-2">
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-medium text-muted-foreground">Front Image</label>
-                                            {color.frontImageUrl ? (
-                                                <div className="relative rounded-lg overflow-hidden border border-border h-24">
-                                                    <img src={color.frontImageUrl} alt="Front" className="w-full h-full object-cover" />
-                                                    <button
-                                                        onClick={() => setConfig({ ...config, colors: config.colors.map((c, i) => i === idx ? { ...c, frontImageUrl: undefined } : c) })}
-                                                        className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1"
-                                                    >
-                                                        <X className="h-3 w-3" />
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed rounded-lg cursor-pointer hover:bg-accent transition-colors">
-                                                    {uploadingImage === `${color.id}-front` ? <Spinner size="sm" /> : (
-                                                        <>
-                                                            <Upload className="h-4 w-4 text-muted-foreground mb-1" />
-                                                            <span className="text-[10px] text-muted-foreground">Upload Front</span>
-                                                        </>
-                                                    )}
-                                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleColorImageUpload(e, color.id, 'front')} />
-                                                </label>
-                                            )}
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-medium text-muted-foreground">Back Image</label>
-                                            {color.backImageUrl ? (
-                                                <div className="relative rounded-lg overflow-hidden border border-border h-24">
-                                                    <img src={color.backImageUrl} alt="Back" className="w-full h-full object-cover" />
-                                                    <button
-                                                        onClick={() => setConfig({ ...config, colors: config.colors.map((c, i) => i === idx ? { ...c, backImageUrl: undefined } : c) })}
-                                                        className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1"
-                                                    >
-                                                        <X className="h-3 w-3" />
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed rounded-lg cursor-pointer hover:bg-accent transition-colors">
-                                                    {uploadingImage === `${color.id}-back` ? <Spinner size="sm" /> : (
-                                                        <>
-                                                            <Upload className="h-4 w-4 text-muted-foreground mb-1" />
-                                                            <span className="text-[10px] text-muted-foreground">Upload Back</span>
-                                                        </>
-                                                    )}
-                                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleColorImageUpload(e, color.id, 'back')} />
-                                                </label>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <label className="flex items-center gap-2 cursor-pointer mt-2">
+                                    <label className="flex items-center gap-2 cursor-pointer mt-4">
                                         <input
                                             type="checkbox"
                                             checked={color.isActive}

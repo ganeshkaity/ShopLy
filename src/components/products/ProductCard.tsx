@@ -74,8 +74,14 @@ export function ProductCard({ product, className }: ProductCardProps) {
         return "bg-red-500";
     };
 
-    // Dummy rating for preview if not provided in product type
-    const rating = 4.7;
+    const generateDeterministicRating = (id: string) => {
+        const sum = (id || "").split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+        return Number((4.1 + (sum % 9) / 10).toFixed(1));
+    };
+
+    const rating = product.reviewCount && product.reviewCount > 0 && product.averageRating 
+        ? product.averageRating 
+        : (product.baseRating || generateDeterministicRating(product.id));
 
     const isRedirection = product.type === 'REDIRECTION';
 

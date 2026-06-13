@@ -58,6 +58,9 @@ export interface Product {
     targetUrl?: string; // For REDIRECTION type products
     productDetails?: string;
     minOrderQty?: number;
+    baseRating?: number;
+    averageRating?: number;
+    reviewCount?: number;
     freeShipping?: boolean;
     returnAvailable?: boolean;
     returnDays?: number;
@@ -87,6 +90,8 @@ export interface CartItem {
     selectedVariants?: Record<string, string>; // { "Size": "M", "Color": "Red" }
     tshirtDetails?: {
         designImageBase64: string;
+        customText?: string;
+        textColor?: string;
         color: { name: string; hex: string };
         size: string;
         quality: string;

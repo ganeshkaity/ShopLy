@@ -176,9 +176,11 @@ export async function getProductById(id: string): Promise<Product | null> {
  */
 export async function createProduct(data: Omit<Product, 'id' | 'slug' | 'createdAt' | 'updatedAt'>) {
     const slug = generateSlug(data.name);
+    const baseRating = Number((4.1 + Math.random() * 0.8).toFixed(1));
     const productData = {
         ...data,
         slug,
+        baseRating,
         isActive: true,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),

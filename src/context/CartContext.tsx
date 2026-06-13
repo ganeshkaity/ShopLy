@@ -44,12 +44,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const loadCartAndEnrich = async () => {
             if (user) {
                 setLoading(true);
-                const cartItems = await getCart(user.uid);
+                const rawItems = await getCart(user.uid);
+
+                // Sanitize: fix NaN/undefined price & quantity
+                const sanitized = rawItems
+                    .filter(item => item && item.productId)
+                    .map(item => ({
+                        ...item,
+                        price:    isNaN(Number(item.price))    ? 0 : Number(item.price),
+                        quantity: isNaN(Number(item.quantity)) ? 1 : Math.max(1, Number(item.quantity)),
+                    }));
 
                 // Enrich items with missing compareAtPrice by fetching from products
-                const enrichedItems = await Promise.all(cartItems.map(async (item) => {
+                const enrichedItems = await Promise.all(sanitized.map(async (item) => {
                     if (item.compareAtPrice === undefined || item.compareAtPrice === null) {
                         try {
+                            // Skip virtual/tshirt IDs — no Firestore doc to query
+                            if (item.type === 'TSHIRT' || item.productId.startsWith('tshirt_')) return item;
+
                             const product = await getProductById(item.productId);
                             if (product) {
                                 return {

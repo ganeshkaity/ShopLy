@@ -23,11 +23,18 @@ export async function getCart(uid: string): Promise<CartItem[]> {
 }
 
 /**
+ * Deep-sanitizes a value so it is safe for Firestore (no class instances, no undefined).
+ */
+function deepSanitize<T>(val: T): T {
+    return JSON.parse(JSON.stringify(val, (_k, v) => (v === undefined ? null : v)));
+}
+
+/**
  * Saves the entire cart to Firestore.
  */
 export async function saveCart(uid: string, items: CartItem[]) {
     const docRef = doc(db, "carts", uid);
-    await setDoc(docRef, { items, updatedAt: new Date().toISOString() });
+    await setDoc(docRef, { items: deepSanitize(items), updatedAt: new Date().toISOString() });
 }
 
 /**
@@ -46,7 +53,7 @@ export async function addToCartService(uid: string, product: Product, quantity: 
     if (existingItemIndex > -1) {
         items[existingItemIndex].quantity += quantity;
     } else {
-        const newItem = {
+        const newItem: any = {
             productId: product.id,
             name: product.name,
             price: price !== undefined ? price : product.price,
@@ -58,6 +65,9 @@ export async function addToCartService(uid: string, product: Product, quantity: 
             compareAtPrice: product.compareAtPrice,
             selectedVariants: selectedVariants
         };
+        if ((product as any).tshirtDetails) {
+            newItem.tshirtDetails = (product as any).tshirtDetails;
+        }
         // Sanitize undefined fields for Firestore
         items.push(JSON.parse(JSON.stringify(newItem)));
     }

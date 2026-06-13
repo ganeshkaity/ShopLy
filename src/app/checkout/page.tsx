@@ -274,8 +274,8 @@ export default function CheckoutPage() {
                         <CardContent className="p-6">
                             <h3 className="font-semibold text-lg mb-4">Order Items</h3>
                             <div className="divide-y divide-border">
-                                {items.map((item) => (
-                                    <div key={item.productId} className="flex items-center justify-between py-3">
+                                {items.map((item, idx) => (
+                                    <div key={`${item.productId}-${idx}`} className="flex items-center justify-between py-3">
                                         <div>
                                             <p className="font-medium">{item.name}</p>
                                             <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>

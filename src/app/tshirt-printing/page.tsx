@@ -8,9 +8,18 @@ import { useCart } from "@/hooks/useCart";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
-import { Input } from "@/components/ui/Input";
 import { cn, formatCurrency } from "@/lib/utils";
-import { Upload, X, Check, Shirt, AlertTriangle, Star, Palette, ChevronRight, Ruler, Package, ArrowRight, ShoppingBag, Maximize, Minus, Plus } from "lucide-react";
+import { Upload, X, Check, Shirt, AlertTriangle, Star, Palette, ChevronRight, Ruler, ArrowRight, ShoppingBag, Minus, Plus, Type } from "lucide-react";
+
+// ── Text colour palette ──────────────────────────────────────────────────────
+const TEXT_COLORS = [
+    { label: "Black",  hex: "#000000" },
+    { label: "White",  hex: "#FFFFFF" },
+    { label: "Red",    hex: "#ef4444" },
+    { label: "Blue",   hex: "#3b82f6" },
+    { label: "Gold",   hex: "#eab308" },
+    { label: "Green",  hex: "#22c55e" },
+];
 
 export default function TShirtPrintingPage() {
     const { user } = useAuth();
@@ -22,18 +31,32 @@ export default function TShirtPrintingPage() {
     const [loading, setLoading] = useState(true);
     const [step, setStep] = useState(1);
 
-    // Design
+    // ── Design image ──────────────────────────────────────────────────────────
     const [designImage, setDesignImage] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Customization (Scale/Drag)
+    // ── Design overlay drag / resize ──────────────────────────────────────────
     const [scale, setScale] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Selections
+    const [isResizing, setIsResizing] = useState(false);
+    const [resizeStart, setResizeStart] = useState({ y: 0, initialScale: 1 });
+
+    // ── Custom text ───────────────────────────────────────────────────────────
+    const [customText, setCustomText] = useState("");
+    const [textColor, setTextColor] = useState("#000000");
+    const [textScale, setTextScale] = useState(1);
+    const [textPosition, setTextPosition] = useState({ x: 0, y: 60 }); // start below image
+    const [isDraggingText, setIsDraggingText] = useState(false);
+    const [textDragStart, setTextDragStart] = useState({ x: 0, y: 0 });
+
+    const [isResizingText, setIsResizingText] = useState(false);
+    const [textResizeStart, setTextResizeStart] = useState({ y: 0, initialScale: 1 });
+
+    // ── Selections ────────────────────────────────────────────────────────────
     const [selectedColor, setSelectedColor] = useState<TShirtColor | null>(null);
     const [selectedSize, setSelectedSize] = useState<TShirtSize | null>(null);
     const [selectedQuality, setSelectedQuality] = useState<TShirtQuality | null>(null);
@@ -53,11 +76,11 @@ export default function TShirtPrintingPage() {
         }).finally(() => setLoading(false));
     }, []);
 
+    // ── Image upload ──────────────────────────────────────────────────────────
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
         if (file.size > 10 * 1024 * 1024) { toast("Max 10MB image size", "error"); return; }
-
         const reader = new FileReader();
         reader.onload = (ev) => {
             const img = new Image();
@@ -76,68 +99,129 @@ export default function TShirtPrintingPage() {
         e.target.value = "";
     };
 
+    // ── Image drag handlers ───────────────────────────────────────────────────
     const handlePointerDown = (e: React.PointerEvent) => {
         setIsDragging(true);
         setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
         e.currentTarget.setPointerCapture(e.pointerId);
     };
-
     const handlePointerMove = (e: React.PointerEvent) => {
-        if (!isDragging || !containerRef.current) return;
-        
+        if (!isDragging) return;
+        const bound = 150;
         let newX = e.clientX - dragStart.x;
         let newY = e.clientY - dragStart.y;
-        
-        // Simple bounds limiting (approximate)
-        const bound = 150;
-        if (newX > bound) newX = bound;
-        if (newX < -bound) newX = -bound;
-        if (newY > bound) newY = bound;
-        if (newY < -bound) newY = -bound;
-
+        newX = Math.max(-bound, Math.min(bound, newX));
+        newY = Math.max(-bound, Math.min(bound, newY));
         setPosition({ x: newX, y: newY });
     };
-
     const handlePointerUp = (e: React.PointerEvent) => {
         setIsDragging(false);
         e.currentTarget.releasePointerCapture(e.pointerId);
     };
 
+    // ── Image resize handlers ─────────────────────────────────────────────────
+    const handleResizePointerDown = (e: React.PointerEvent) => {
+        e.stopPropagation();
+        setIsResizing(true);
+        setResizeStart({ y: e.clientY, initialScale: scale });
+        e.currentTarget.setPointerCapture(e.pointerId);
+    };
+    const handleResizePointerMove = (e: React.PointerEvent) => {
+        if (!isResizing) return;
+        const deltaY = e.clientY - resizeStart.y;
+        setScale(Math.max(0.2, Math.min(3.0, resizeStart.initialScale + deltaY / 100)));
+    };
+    const handleResizePointerUp = (e: React.PointerEvent) => {
+        setIsResizing(false);
+        e.currentTarget.releasePointerCapture(e.pointerId);
+    };
+
+    // ── Text drag handlers ────────────────────────────────────────────────────
+    const handleTextPointerDown = (e: React.PointerEvent) => {
+        setIsDraggingText(true);
+        setTextDragStart({ x: e.clientX - textPosition.x, y: e.clientY - textPosition.y });
+        e.currentTarget.setPointerCapture(e.pointerId);
+    };
+    const handleTextPointerMove = (e: React.PointerEvent) => {
+        if (!isDraggingText) return;
+        const bound = 150;
+        let newX = e.clientX - textDragStart.x;
+        let newY = e.clientY - textDragStart.y;
+        newX = Math.max(-bound, Math.min(bound, newX));
+        newY = Math.max(-bound, Math.min(bound, newY));
+        setTextPosition({ x: newX, y: newY });
+    };
+    const handleTextPointerUp = (e: React.PointerEvent) => {
+        setIsDraggingText(false);
+        e.currentTarget.releasePointerCapture(e.pointerId);
+    };
+
+    // ── Text resize handlers ──────────────────────────────────────────────────
+    const handleTextResizePointerDown = (e: React.PointerEvent) => {
+        e.stopPropagation();
+        setIsResizingText(true);
+        setTextResizeStart({ y: e.clientY, initialScale: textScale });
+        e.currentTarget.setPointerCapture(e.pointerId);
+    };
+    const handleTextResizePointerMove = (e: React.PointerEvent) => {
+        if (!isResizingText) return;
+        const deltaY = e.clientY - textResizeStart.y;
+        setTextScale(Math.max(0.4, Math.min(4.0, textResizeStart.initialScale + deltaY / 80)));
+    };
+    const handleTextResizePointerUp = (e: React.PointerEvent) => {
+        setIsResizingText(false);
+        e.currentTarget.releasePointerCapture(e.pointerId);
+    };
+
+    // ── Add to cart ───────────────────────────────────────────────────────────
     const totalPrice = (selectedQuality?.price || 0) * quantity;
 
     const handleProceedToCart = () => {
-        if (!config || !selectedColor || !selectedSize || !selectedQuality || !designImage) {
+        if (!config || !selectedColor || !selectedSize || !selectedQuality) {
             toast("Please complete all selections", "error");
+            return;
+        }
+        if (!designImage && !customText.trim()) {
+            toast("Please upload a design or add custom text", "error");
             return;
         }
 
         const tshirtId = `tshirt_custom_${Date.now()}`;
-        
-        // Use a generated snapshot or the uploaded design as thumbnail
-        const thumbnail = designImage;
+        const safePrice = Number(selectedQuality.price) || 0;
+        const safeQty   = Number(quantity) || 1;
+
+        const tshirtDetails = {
+            designImageBase64: designImage || "",
+            customText:        customText.trim(),
+            textColor,
+            color:     { name: selectedColor.name, hex: selectedColor.hex },
+            size:      selectedSize.label,
+            quality:   selectedQuality.name,
+            printSide,
+            notes:     notes.trim(),
+        };
 
         addItem({
-            productId: tshirtId,
+            id: tshirtId,
             name: `Custom T-Shirt - ${selectedColor.name}`,
-            price: selectedQuality.price,
-            image: thumbnail,
-            quantity: quantity,
-            category: 'T-Shirts',
-            type: 'TSHIRT',
-            tshirtDetails: {
-                designImageBase64: designImage,
-                color: { name: selectedColor.name, hex: selectedColor.hex },
-                size: selectedSize.label,
-                quality: selectedQuality.name,
-                printSide,
-                notes: notes.trim()
-            }
-        });
+            price: safePrice,
+            images: [designImage || ""],
+            category: "T-Shirts",
+            type: "TSHIRT",
+            stock: 999,
+            description: "Custom T-Shirt",
+            slug: tshirtId,
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            tshirtDetails,
+        } as any, safeQty, undefined, safePrice);
 
         toast("T-Shirt added to cart!", "success");
         router.push("/checkout");
     };
 
+    // ── Early returns ─────────────────────────────────────────────────────────
     if (loading) return <div className="flex justify-center py-32"><Spinner size="lg" /></div>;
     if (!config?.isServiceActive) return (
         <div className="container-custom py-32 text-center">
@@ -148,14 +232,12 @@ export default function TShirtPrintingPage() {
     );
 
     const steps = [
-        { num: 1, label: "Design", icon: Upload },
+        { num: 1, label: "Design",    icon: Upload  },
         { num: 2, label: "Customize", icon: Palette },
-        { num: 3, label: "Quality", icon: Star },
+        { num: 3, label: "Quality",   icon: Star    },
     ];
 
-    const currentTshirtImage = selectedColor 
-        ? (printSide === 'front' ? selectedColor.frontImageUrl : selectedColor.backImageUrl)
-        : null;
+    const currentTshirtImage = printSide === 'front' ? '/front.png' : '/back.png';
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-rose-50 via-white to-purple-50/30">
@@ -167,7 +249,7 @@ export default function TShirtPrintingPage() {
                         <Shirt className="h-4 w-4" /> Custom T-Shirt Printing
                     </div>
                     <h1 className="font-serif text-4xl md:text-5xl font-bold mb-3">Design Your Perfect Shirt</h1>
-                    <p className="text-white/80 text-lg max-w-xl mx-auto">Upload your design, pick your style, and we'll print it with love. Delivered to your door.</p>
+                    <p className="text-white/80 text-lg max-w-xl mx-auto">Upload your design, add custom text, pick your style — delivered to your door.</p>
                 </div>
             </div>
 
@@ -195,58 +277,54 @@ export default function TShirtPrintingPage() {
                     ))}
                 </div>
 
-                {/* STEP 1: Upload Design */}
+                {/* ── STEP 1: Upload Design ─────────────────────────────────────────────── */}
                 {step === 1 && (
                     <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="text-center mb-8">
                             <h2 className="text-2xl font-bold font-serif">Upload Your Design</h2>
-                            <p className="text-muted-foreground mt-1">PNG, JPG, or WEBP with transparent background works best</p>
+                            <p className="text-muted-foreground mt-1">PNG, JPG, or WEBP with transparent background works best. You can also just add text in the next step.</p>
                         </div>
 
-                        <div className="relative">
-                            {/* Upload area */}
-                            <div className="mt-8">
-                                {designImage ? (
-                                    <div className="flex flex-col items-center gap-4">
-                                        <div className="relative w-48 h-48 border border-border rounded-xl bg-gray-50 flex items-center justify-center p-4">
-                                            <img src={designImage} alt="Design" className="max-w-full max-h-full object-contain drop-shadow-xl" />
-                                        </div>
-                                        <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-2xl px-5 py-3">
-                                            <Check className="h-5 w-5 text-green-600" />
-                                            <span className="font-semibold text-green-700">Design uploaded!</span>
-                                        </div>
-                                        <div className="flex gap-3">
-                                            <Button variant="outline" className="rounded-full gap-2" onClick={() => fileInputRef.current?.click()}>
-                                                <Upload className="h-4 w-4" /> Change Design
-                                            </Button>
-                                            <Button variant="outline" className="rounded-full gap-2 text-red-500 border-red-200 hover:bg-red-50" onClick={() => setDesignImage(null)}>
-                                                <X className="h-4 w-4" /> Remove
-                                            </Button>
-                                        </div>
+                        <div className="mt-8">
+                            {designImage ? (
+                                <div className="flex flex-col items-center gap-4">
+                                    <div className="relative w-48 h-48 border border-border rounded-xl bg-gray-50 flex items-center justify-center p-4">
+                                        <img src={designImage} alt="Design" className="max-w-full max-h-full object-contain drop-shadow-xl" />
                                     </div>
-                                ) : (
-                                    <label
-                                        htmlFor="tshirt-design-upload"
-                                        className="flex flex-col items-center gap-4 p-10 border-2 border-dashed border-primary/30 rounded-3xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-all duration-300 group"
-                                    >
-                                        <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 group-hover:scale-110 transition-all">
-                                            <Upload className="h-8 w-8 text-primary" />
-                                        </div>
-                                        <div className="text-center">
-                                            <p className="font-bold text-lg">Click to upload your design</p>
-                                            <p className="text-muted-foreground text-sm mt-1">PNG, JPG, WEBP up to 10MB</p>
-                                        </div>
-                                    </label>
-                                )}
-                                <input id="tshirt-design-upload" type="file" className="hidden" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} />
-                            </div>
+                                    <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-2xl px-5 py-3">
+                                        <Check className="h-5 w-5 text-green-600" />
+                                        <span className="font-semibold text-green-700">Design uploaded!</span>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <Button variant="outline" className="rounded-full gap-2" onClick={() => fileInputRef.current?.click()}>
+                                            <Upload className="h-4 w-4" /> Change Design
+                                        </Button>
+                                        <Button variant="outline" className="rounded-full gap-2 text-red-500 border-red-200 hover:bg-red-50" onClick={() => setDesignImage(null)}>
+                                            <X className="h-4 w-4" /> Remove
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <label
+                                    htmlFor="tshirt-design-upload"
+                                    className="flex flex-col items-center gap-4 p-10 border-2 border-dashed border-primary/30 rounded-3xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-all duration-300 group"
+                                >
+                                    <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 group-hover:scale-110 transition-all">
+                                        <Upload className="h-8 w-8 text-primary" />
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="font-bold text-lg">Click to upload your design</p>
+                                        <p className="text-muted-foreground text-sm mt-1">PNG, JPG, WEBP up to 10MB</p>
+                                    </div>
+                                </label>
+                            )}
+                            <input id="tshirt-design-upload" type="file" className="hidden" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} />
                         </div>
 
                         <div className="flex justify-end mt-8">
                             <Button
                                 className="rounded-full px-8 gap-2"
                                 onClick={() => setStep(2)}
-                                disabled={!designImage}
                             >
                                 Next: Customize <ArrowRight className="h-4 w-4" />
                             </Button>
@@ -254,40 +332,36 @@ export default function TShirtPrintingPage() {
                     </div>
                 )}
 
-                {/* STEP 2: Color & Size & Position */}
+                {/* ── STEP 2: Color, Size & Position ───────────────────────────────────── */}
                 {step === 2 && (
                     <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
                         <div className="text-center">
                             <h2 className="text-2xl font-bold font-serif">Customize Your Shirt</h2>
-                            <p className="text-muted-foreground mt-1">Drag and resize your design on the shirt</p>
+                            <p className="text-muted-foreground mt-1">Drag and resize your design or text on the shirt</p>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
-                            {/* Left: Interactive Preview */}
+                            {/* Left: Interactive T-Shirt Preview */}
                             <div className="relative flex flex-col items-center gap-4">
-                                <div 
-                                    className="relative w-[300px] h-[360px] bg-white rounded-2xl border shadow-sm flex items-center justify-center overflow-hidden touch-none"
+                                <div
+                                    className="relative w-[300px] h-[360px] rounded-2xl border shadow-sm flex items-center justify-center overflow-hidden touch-none"
+                                    style={{ backgroundColor: selectedColor?.hex || "#FFFFFF" }}
                                     ref={containerRef}
                                 >
-                                    {currentTshirtImage ? (
-                                        <img src={currentTshirtImage} alt="T-Shirt" className="w-full h-full object-cover pointer-events-none" />
-                                    ) : (
-                                        <svg viewBox="0 0 300 340" className="absolute inset-0 w-full h-full drop-shadow-xl transition-all duration-500 pointer-events-none">
-                                            <path
-                                                d="M100,20 L70,10 L20,50 L50,80 L50,320 L250,320 L250,80 L280,50 L230,10 L200,20 C190,60 110,60 100,20 Z"
-                                                fill={selectedColor?.hex || "#FFFFFF"}
-                                                stroke="#e5e7eb"
-                                                strokeWidth="2"
-                                            />
-                                        </svg>
-                                    )}
+                                    {/* T-Shirt image (transparent PNG, BG colour shows through) */}
+                                    <img
+                                        src={currentTshirtImage}
+                                        alt="T-Shirt"
+                                        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                                        style={{ zIndex: 10 }}
+                                    />
 
-                                    {/* Draggable Design Overlay */}
+                                    {/* Draggable Design Overlay (z-20) */}
                                     {designImage && (
-                                        <div 
+                                        <div
                                             className={cn(
-                                                "absolute cursor-move transition-transform ease-out",
-                                                isDragging ? "duration-0" : "duration-200"
+                                                "absolute cursor-move ease-out",
+                                                isDragging ? "transition-none" : "transition-transform duration-100"
                                             )}
                                             style={{
                                                 top: "30%",
@@ -295,47 +369,105 @@ export default function TShirtPrintingPage() {
                                                 width: "50%",
                                                 height: "40%",
                                                 transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                                                zIndex: 20,
                                             }}
                                             onPointerDown={handlePointerDown}
                                             onPointerMove={handlePointerMove}
                                             onPointerUp={handlePointerUp}
                                             onPointerCancel={handlePointerUp}
                                         >
-                                            <div className="relative w-full h-full p-2 border-2 border-dashed border-transparent hover:border-primary/50">
+                                            <div className="relative w-full h-full p-1 border-2 border-dashed border-transparent hover:border-primary/60 group rounded-sm">
                                                 <img src={designImage} alt="Design" className="w-full h-full object-contain pointer-events-none" />
+                                                {/* Resize handle */}
+                                                <div
+                                                    className="absolute -bottom-2.5 -right-2.5 w-6 h-6 bg-white border-2 border-primary rounded-full cursor-nwse-resize shadow-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-auto"
+                                                    onPointerDown={handleResizePointerDown}
+                                                    onPointerMove={handleResizePointerMove}
+                                                    onPointerUp={handleResizePointerUp}
+                                                    onPointerCancel={handleResizePointerUp}
+                                                >
+                                                    <div className="w-2 h-2 bg-primary rounded-full pointer-events-none" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Draggable Text Overlay (z-30) */}
+                                    {customText.trim() && (
+                                        <div
+                                            className={cn(
+                                                "absolute cursor-move ease-out select-none",
+                                                isDraggingText ? "transition-none" : "transition-transform duration-100"
+                                            )}
+                                            style={{
+                                                top: "55%",
+                                                left: "50%",
+                                                transform: `translate(calc(-50% + ${textPosition.x}px), ${textPosition.y}px) scale(${textScale})`,
+                                                zIndex: 30,
+                                                whiteSpace: "nowrap",
+                                            }}
+                                            onPointerDown={handleTextPointerDown}
+                                            onPointerMove={handleTextPointerMove}
+                                            onPointerUp={handleTextPointerUp}
+                                            onPointerCancel={handleTextPointerUp}
+                                        >
+                                            <div className="relative group border-2 border-dashed border-transparent hover:border-primary/60 px-2 py-1 rounded">
+                                                <span
+                                                    className="font-bold text-xl pointer-events-none"
+                                                    style={{ color: textColor, textShadow: textColor === "#FFFFFF" ? "0 1px 2px rgba(0,0,0,0.4)" : "none" }}
+                                                >
+                                                    {customText}
+                                                </span>
+                                                {/* Text resize handle */}
+                                                <div
+                                                    className="absolute -bottom-2.5 -right-2.5 w-6 h-6 bg-white border-2 border-primary rounded-full cursor-nwse-resize shadow-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-auto"
+                                                    onPointerDown={handleTextResizePointerDown}
+                                                    onPointerMove={handleTextResizePointerMove}
+                                                    onPointerUp={handleTextResizePointerUp}
+                                                    onPointerCancel={handleTextResizePointerUp}
+                                                >
+                                                    <div className="w-2 h-2 bg-primary rounded-full pointer-events-none" />
+                                                </div>
                                             </div>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Scale Controls */}
-                                <div className="flex items-center gap-4 bg-white px-6 py-3 rounded-full border shadow-sm">
-                                    <button onClick={() => setScale(Math.max(0.2, scale - 0.1))} className="p-1 hover:text-primary"><Minus className="h-5 w-5" /></button>
-                                    <span className="text-sm font-bold w-12 text-center">{Math.round(scale * 100)}%</span>
-                                    <button onClick={() => setScale(Math.min(2.5, scale + 0.1))} className="p-1 hover:text-primary"><Plus className="h-5 w-5" /></button>
-                                </div>
+                                {/* Image Scale Controls */}
+                                {designImage && (
+                                    <div className="flex items-center gap-3 bg-white px-5 py-2.5 rounded-full border shadow-sm">
+                                        <span className="text-xs text-muted-foreground font-semibold">Image Size</span>
+                                        <button onClick={() => setScale(Math.max(0.2, scale - 0.1))} className="p-1 hover:text-primary"><Minus className="h-4 w-4" /></button>
+                                        <span className="text-sm font-bold w-10 text-center">{Math.round(scale * 100)}%</span>
+                                        <button onClick={() => setScale(Math.min(3.0, scale + 0.1))} className="p-1 hover:text-primary"><Plus className="h-4 w-4" /></button>
+                                    </div>
+                                )}
+
+                                {/* Text Scale Controls */}
+                                {customText.trim() && (
+                                    <div className="flex items-center gap-3 bg-white px-5 py-2.5 rounded-full border shadow-sm">
+                                        <span className="text-xs text-muted-foreground font-semibold">Text Size</span>
+                                        <button onClick={() => setTextScale(Math.max(0.4, textScale - 0.1))} className="p-1 hover:text-primary"><Minus className="h-4 w-4" /></button>
+                                        <span className="text-sm font-bold w-10 text-center">{Math.round(textScale * 100)}%</span>
+                                        <button onClick={() => setTextScale(Math.min(4.0, textScale + 0.1))} className="p-1 hover:text-primary"><Plus className="h-4 w-4" /></button>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Right: Options */}
-                            <div className="space-y-8">
+                            <div className="space-y-7">
                                 {/* Print Side */}
                                 <div>
-                                    <label className="block text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">
-                                        Print Side
-                                    </label>
+                                    <label className="block text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Print Side</label>
                                     <div className="flex gap-4">
-                                        <button 
+                                        <button
                                             onClick={() => setPrintSide('front')}
                                             className={cn("flex-1 py-3 rounded-xl border-2 font-bold text-sm transition-all", printSide === 'front' ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground")}
-                                        >
-                                            Front Print
-                                        </button>
-                                        <button 
+                                        >Front Print</button>
+                                        <button
                                             onClick={() => setPrintSide('back')}
                                             className={cn("flex-1 py-3 rounded-xl border-2 font-bold text-sm transition-all", printSide === 'back' ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground")}
-                                        >
-                                            Back Print
-                                        </button>
+                                        >Back Print</button>
                                     </div>
                                 </div>
 
@@ -352,9 +484,7 @@ export default function TShirtPrintingPage() {
                                                 title={color.name}
                                                 className={cn(
                                                     "h-11 w-11 rounded-full border-4 transition-all duration-200 hover:scale-110",
-                                                    selectedColor?.id === color.id
-                                                        ? "border-primary scale-110 shadow-lg shadow-primary/30"
-                                                        : "border-transparent hover:border-gray-300"
+                                                    selectedColor?.id === color.id ? "border-primary scale-110 shadow-lg shadow-primary/30" : "border-transparent hover:border-gray-300"
                                                 )}
                                                 style={{ backgroundColor: color.hex, outline: color.hex === "#FFFFFF" ? "1px solid #e5e7eb" : "none" }}
                                             />
@@ -384,19 +514,58 @@ export default function TShirtPrintingPage() {
                                         ))}
                                     </div>
                                 </div>
+
+                                {/* Custom Text */}
+                                <div>
+                                    <label className="block text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                                        <Type className="h-4 w-4 inline mr-2" />Custom Text (Optional)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={customText}
+                                        onChange={e => setCustomText(e.target.value)}
+                                        placeholder="e.g. My Cool Text"
+                                        maxLength={40}
+                                        className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/20 shadow-sm"
+                                    />
+                                    {/* Text colour picker */}
+                                    {customText.trim() && (
+                                        <div className="mt-3">
+                                            <p className="text-xs font-semibold text-muted-foreground mb-2">Text Colour</p>
+                                            <div className="flex gap-2">
+                                                {TEXT_COLORS.map(tc => (
+                                                    <button
+                                                        key={tc.hex}
+                                                        title={tc.label}
+                                                        onClick={() => setTextColor(tc.hex)}
+                                                        className={cn(
+                                                            "h-8 w-8 rounded-full border-4 transition-all hover:scale-110",
+                                                            textColor === tc.hex ? "border-primary scale-110 shadow-md" : "border-transparent hover:border-gray-300"
+                                                        )}
+                                                        style={{ backgroundColor: tc.hex, outline: tc.hex === "#FFFFFF" ? "1px solid #e5e7eb" : "none" }}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
                         <div className="flex justify-between pt-8 border-t">
                             <Button variant="outline" className="rounded-full px-6" onClick={() => setStep(1)}>Back</Button>
-                            <Button className="rounded-full px-8 gap-2" onClick={() => setStep(3)} disabled={!selectedColor || !selectedSize}>
+                            <Button
+                                className="rounded-full px-8 gap-2"
+                                onClick={() => setStep(3)}
+                                disabled={!selectedColor || !selectedSize}
+                            >
                                 Next: Quality <ArrowRight className="h-4 w-4" />
                             </Button>
                         </div>
                     </div>
                 )}
 
-                {/* STEP 3: Quality & Finalize */}
+                {/* ── STEP 3: Quality & Finalize ────────────────────────────────────────── */}
                 {step === 3 && (
                     <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
                         <div className="text-center">
@@ -449,7 +618,6 @@ export default function TShirtPrintingPage() {
 
                             {/* Summary & Checkout */}
                             <div className="bg-white rounded-3xl border p-6 shadow-sm space-y-6">
-                                {/* Order Stopped Banner */}
                                 {config!.isOrderStopped && (
                                     <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 flex gap-3">
                                         <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
@@ -459,13 +627,14 @@ export default function TShirtPrintingPage() {
                                         </div>
                                     </div>
                                 )}
-                            
+
                                 <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Summary</h3>
                                 <div className="space-y-2 text-sm">
                                     <div className="flex justify-between"><span className="text-muted-foreground">Color</span> <span className="font-semibold">{selectedColor?.name}</span></div>
                                     <div className="flex justify-between"><span className="text-muted-foreground">Size</span> <span className="font-semibold">{selectedSize?.label}</span></div>
-                                    <div className="flex justify-between"><span className="text-muted-foreground">Quality</span> <span className="font-semibold">{selectedQuality?.name}</span></div>
+                                    <div className="flex justify-between"><span className="text-muted-foreground">Quality</span> <span className="font-semibold">{selectedQuality?.name || "—"}</span></div>
                                     <div className="flex justify-between"><span className="text-muted-foreground">Print Side</span> <span className="font-semibold capitalize">{printSide}</span></div>
+                                    {customText.trim() && <div className="flex justify-between"><span className="text-muted-foreground">Custom Text</span> <span className="font-semibold truncate max-w-[120px]">{customText}</span></div>}
                                 </div>
                                 <hr />
                                 <div className="flex items-center justify-between">
