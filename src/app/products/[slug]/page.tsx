@@ -529,8 +529,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
             {/* Product Reviews */}
             <ProductReviews productId={product.id} />
 
-            {/* Sticky Bottom Bar (Mobile/Tablet optimized) */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-border p-4 lg:hidden animate-in fade-in slide-in-from-bottom duration-500 shadow-[0_-8px_30px_rgb(0,0,0,0.04)]">
+            {/* Sticky Bottom Bar (Mobile/Tablet optimized) — hidden for REDIRECTION products */}
+            {product.type !== 'REDIRECTION' && <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-border p-4 lg:hidden animate-in fade-in slide-in-from-bottom duration-500 shadow-[0_-8px_30px_rgb(0,0,0,0.04)]">
                 <div className="container-custom flex items-center gap-4">
                     <div className="flex-1 flex flex-col">
                         <span className="text-xl font-bold text-primary">{formatCurrency(displayPrice)}</span>
@@ -576,7 +576,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
                         </Button>
                     </div>
                 </div>
-            </div>
+            </div>}
 
             {/* Recommendation Sections */}
             <div className="mt-16 flex flex-col gap-10">

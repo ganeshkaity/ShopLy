@@ -32,7 +32,8 @@ export default function TShirtPrintingPage() {
     const [step, setStep] = useState(1);
 
     // ── Design image ──────────────────────────────────────────────────────────
-    const [designImage, setDesignImage] = useState<string | null>(null);
+    const [designImage, setDesignImage] = useState<string | null>(null);   // ImgBB URL after upload
+    const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // ── Design overlay drag / resize ──────────────────────────────────────────
@@ -76,27 +77,52 @@ export default function TShirtPrintingPage() {
         }).finally(() => setLoading(false));
     }, []);
 
-    // ── Image upload ──────────────────────────────────────────────────────────
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // ── Image upload → ImgBB ──────────────────────────────────────────────────
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (file.size > 10 * 1024 * 1024) { toast("Max 10MB image size", "error"); return; }
-        const reader = new FileReader();
-        reader.onload = (ev) => {
+        if (file.size > 20 * 1024 * 1024) { toast("Max 20MB image size", "error"); return; }
+
+        setIsUploading(true);
+        try {
+            const apiKey = process.env.NEXT_PUBLIC_IMAGEBB_API;
+            if (!apiKey) throw new Error("ImgBB API key not configured");
+
+            // Compress to ≤ 5 MB before upload
+            const canvas = document.createElement("canvas");
             const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement("canvas");
-                const MAX = 800;
-                const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
-                canvas.width = img.width * ratio;
-                canvas.height = img.height * ratio;
-                canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-                setDesignImage(canvas.toDataURL("image/png", 0.85));
-            };
-            img.src = ev.target!.result as string;
-        };
-        reader.readAsDataURL(file);
-        e.target.value = "";
+            await new Promise<void>((res, rej) => {
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    img.onload = () => res();
+                    img.onerror = rej;
+                    img.src = ev.target!.result as string;
+                };
+                reader.onerror = rej;
+                reader.readAsDataURL(file);
+            });
+            const MAX = 1200;
+            const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+            canvas.width  = Math.round(img.width  * ratio);
+            canvas.height = Math.round(img.height * ratio);
+            canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const base64 = canvas.toDataURL("image/png", 0.9).split(",")[1];
+
+            const form = new FormData();
+            form.append("key", apiKey);
+            form.append("image", base64);
+
+            const res = await fetch("https://api.imgbb.com/1/upload", { method: "POST", body: form });
+            if (!res.ok) throw new Error("ImgBB upload failed");
+            const data = await res.json();
+            setDesignImage(data.data.url as string);
+            toast("Design uploaded!", "success");
+        } catch (err: any) {
+            toast(err.message || "Upload failed. Try again.", "error");
+        } finally {
+            setIsUploading(false);
+            e.target.value = "";
+        }
     };
 
     // ── Image drag handlers ───────────────────────────────────────────────────
@@ -286,17 +312,27 @@ export default function TShirtPrintingPage() {
                         </div>
 
                         <div className="mt-8">
-                            {designImage ? (
+                            {isUploading ? (
+                                <div className="flex flex-col items-center gap-4 p-10 border-2 border-dashed border-primary/40 rounded-3xl bg-primary/5">
+                                    <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
+                                        <Spinner size="lg" />
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="font-bold text-lg text-primary">Uploading design…</p>
+                                        <p className="text-muted-foreground text-sm mt-1">Please wait while we upload your image</p>
+                                    </div>
+                                </div>
+                            ) : designImage ? (
                                 <div className="flex flex-col items-center gap-4">
                                     <div className="relative w-48 h-48 border border-border rounded-xl bg-gray-50 flex items-center justify-center p-4">
                                         <img src={designImage} alt="Design" className="max-w-full max-h-full object-contain drop-shadow-xl" />
                                     </div>
                                     <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-2xl px-5 py-3">
                                         <Check className="h-5 w-5 text-green-600" />
-                                        <span className="font-semibold text-green-700">Design uploaded!</span>
+                                        <span className="font-semibold text-green-700">Design uploaded to cloud!</span>
                                     </div>
                                     <div className="flex gap-3">
-                                        <Button variant="outline" className="rounded-full gap-2" onClick={() => fileInputRef.current?.click()}>
+                                        <Button variant="outline" className="rounded-full gap-2" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
                                             <Upload className="h-4 w-4" /> Change Design
                                         </Button>
                                         <Button variant="outline" className="rounded-full gap-2 text-red-500 border-red-200 hover:bg-red-50" onClick={() => setDesignImage(null)}>
@@ -314,17 +350,18 @@ export default function TShirtPrintingPage() {
                                     </div>
                                     <div className="text-center">
                                         <p className="font-bold text-lg">Click to upload your design</p>
-                                        <p className="text-muted-foreground text-sm mt-1">PNG, JPG, WEBP up to 10MB</p>
+                                        <p className="text-muted-foreground text-sm mt-1">PNG, JPG, WEBP up to 20MB — hosted on cloud</p>
                                     </div>
                                 </label>
                             )}
-                            <input id="tshirt-design-upload" type="file" className="hidden" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} />
+                            <input id="tshirt-design-upload" type="file" className="hidden" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} disabled={isUploading} />
                         </div>
 
                         <div className="flex justify-end mt-8">
                             <Button
                                 className="rounded-full px-8 gap-2"
                                 onClick={() => setStep(2)}
+                                disabled={isUploading}
                             >
                                 Next: Customize <ArrowRight className="h-4 w-4" />
                             </Button>

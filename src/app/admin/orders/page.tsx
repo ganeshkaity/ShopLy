@@ -56,6 +56,43 @@ export default function AdminOrdersPage() {
         }
     };
 
+    const handleDownloadDesign = async (url: string, filename: string) => {
+        setDownloadingId(`design-${filename}`);
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("Failed to fetch design");
+
+            // Check Content-Length if available
+            const contentLength = res.headers.get("content-length");
+            const MAX_BYTES = 20 * 1024 * 1024; // 20 MB
+            if (contentLength && Number(contentLength) > MAX_BYTES) {
+                toast("Design file exceeds 20 MB limit", "error");
+                return;
+            }
+
+            const blob = await res.blob();
+            if (blob.size > MAX_BYTES) {
+                toast("Design file exceeds 20 MB limit", "error");
+                return;
+            }
+
+            const objectUrl = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = objectUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(objectUrl);
+            toast("Design downloaded", "success");
+        } catch (error) {
+            toast("Failed to download design", "error");
+        } finally {
+            setDownloadingId(null);
+        }
+    };
+
+
     const handleDownloadSlip = async (order: Order) => {
         setDownloadingId(`slip-${order.id}`);
         try {
@@ -140,11 +177,22 @@ export default function AdminOrdersPage() {
                                                             {item.tshirtDetails && (
                                                                 <div className="ml-14 mt-2 text-xs text-muted-foreground bg-gray-50 p-2 rounded border">
                                                                     <p>Color: {item.tshirtDetails.color.name} | Size: {item.tshirtDetails.size} | Quality: {item.tshirtDetails.quality} | Side: {item.tshirtDetails.printSide}</p>
+                                                                    {item.tshirtDetails.customText && <p>Custom Text: &quot;{item.tshirtDetails.customText}&quot; <span style={{ color: item.tshirtDetails.textColor }}>■</span></p>}
                                                                     {item.tshirtDetails.notes && <p>Notes: {item.tshirtDetails.notes}</p>}
                                                                     {item.tshirtDetails.designImageBase64 && (
-                                                                        <a href={item.tshirtDetails.designImageBase64} download={`design_${order.id}_${idx}.png`} className="text-primary hover:underline mt-1 inline-block">
-                                                                            Download Design PNG
-                                                                        </a>
+                                                                        <button
+                                                                            onClick={() => handleDownloadDesign(
+                                                                                item.tshirtDetails!.designImageBase64,
+                                                                                `design_${order.id}_${idx}.png`
+                                                                            )}
+                                                                            disabled={downloadingId === `design_${order.id}_${idx}.png`}
+                                                                            className="flex items-center gap-1 text-primary hover:underline mt-1 disabled:opacity-50"
+                                                                        >
+                                                                            {downloadingId === `design_${order.id}_${idx}.png`
+                                                                                ? <><Spinner size="sm" /> Downloading…</>
+                                                                                : <><Download className="h-3 w-3" /> Download Design PNG (max 20MB)</>
+                                                                            }
+                                                                        </button>
                                                                     )}
                                                                 </div>
                                                             )}

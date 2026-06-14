@@ -129,6 +129,8 @@ export interface OrderItem {
     slug?: string;
     tshirtDetails?: {
         designImageBase64: string;
+        customText?: string;
+        textColor?: string;
         color: { name: string; hex: string };
         size: string;
         quality: string;
