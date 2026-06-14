@@ -88,34 +88,17 @@ export default function TShirtPrintingPage() {
             const apiKey = process.env.NEXT_PUBLIC_IMAGEBB_API;
             if (!apiKey) throw new Error("ImgBB API key not configured");
 
-            // Compress to ≤ 5 MB before upload
-            const canvas = document.createElement("canvas");
-            const img = new Image();
-            await new Promise<void>((res, rej) => {
-                const reader = new FileReader();
-                reader.onload = ev => {
-                    img.onload = () => res();
-                    img.onerror = rej;
-                    img.src = ev.target!.result as string;
-                };
-                reader.onerror = rej;
-                reader.readAsDataURL(file);
-            });
-            const MAX = 1200;
-            const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
-            canvas.width  = Math.round(img.width  * ratio);
-            canvas.height = Math.round(img.height * ratio);
-            canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-            const base64 = canvas.toDataURL("image/png", 0.9).split(",")[1];
-
             const form = new FormData();
             form.append("key", apiKey);
-            form.append("image", base64);
+            form.append("image", file);
 
             const res = await fetch("https://api.imgbb.com/1/upload", { method: "POST", body: form });
             if (!res.ok) throw new Error("ImgBB upload failed");
             const data = await res.json();
-            setDesignImage(data.data.url as string);
+            // Prefer the direct image URL (`url`) if present; fall back to nested `image.url` or `display_url`
+            const directUrl = data?.data?.url || data?.data?.image?.url || data?.data?.display_url;
+            if (!directUrl) throw new Error('ImgBB response missing image URL');
+            setDesignImage(directUrl as string);
             toast("Design uploaded!", "success");
         } catch (err: any) {
             toast(err.message || "Upload failed. Try again.", "error");

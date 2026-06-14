@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import React, { useEffect } from "react";
-import { LayoutDashboard, Package, ShoppingCart, Users, Tag, BarChart3, ChevronLeft, Menu, X, Settings, MessageSquare, Layers, Bell, MessageCircle, UserX, Shirt } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, Users, Tag, BarChart3, ChevronLeft, Menu, X, Settings, MessageSquare, Layers, Bell, MessageCircle, UserX, Shirt, Cloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
@@ -23,6 +23,7 @@ const ADMIN_LINKS = [
     { name: "Feedback & Issues", href: "/admin/feedback", icon: MessageCircle },
     { name: "Deletions", href: "/admin/deletions", icon: UserX },
     { name: "Settings", href: "/admin/settings", icon: Settings },
+    { name: "Image Host", href: "/admin/image-host", icon: Cloud },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -87,7 +88,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </div>
                     <nav className="flex flex-col gap-1 p-4">
                         {ADMIN_LINKS.map((link) => (
-                            <Link key={link.href} href={link.href} onClick={() => setIsSidebarOpen(false)}
+                            <Link 
+                                key={link.href} 
+                                href={link.href} 
+                                onClick={() => setIsSidebarOpen(false)}
                                 className={cn("flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium",
                                     pathname === link.href ? "bg-primary text-white" : "text-foreground hover:bg-accent"
                                 )}

@@ -60,33 +60,33 @@ export default function AdminOrdersPage() {
         setDownloadingId(`design-${filename}`);
         try {
             const res = await fetch(url);
-            if (!res.ok) throw new Error("Failed to fetch design");
+            if (!res.ok) throw new Error('Failed to fetch design');
 
             // Check Content-Length if available
-            const contentLength = res.headers.get("content-length");
+            const contentLength = res.headers.get('content-length');
             const MAX_BYTES = 20 * 1024 * 1024; // 20 MB
             if (contentLength && Number(contentLength) > MAX_BYTES) {
-                toast("Design file exceeds 20 MB limit", "error");
+                toast('Design file exceeds 20 MB limit', 'error');
                 return;
             }
 
             const blob = await res.blob();
             if (blob.size > MAX_BYTES) {
-                toast("Design file exceeds 20 MB limit", "error");
+                toast('Design file exceeds 20 MB limit', 'error');
                 return;
             }
 
             const objectUrl = URL.createObjectURL(blob);
-            const a = document.createElement("a");
+            const a = document.createElement('a');
             a.href = objectUrl;
             a.download = filename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(objectUrl);
-            toast("Design downloaded", "success");
+            toast('Design downloaded', 'success');
         } catch (error) {
-            toast("Failed to download design", "error");
+            toast('Failed to download design', 'error');
         } finally {
             setDownloadingId(null);
         }

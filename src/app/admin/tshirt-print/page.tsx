@@ -73,7 +73,17 @@ export default function AdminTShirtPrintPage() {
         });
         if (!res.ok) throw new Error("Failed to upload to ImgBB");
         const data = await res.json();
-        return data.data.url;
+        // Prefer direct image URL (original quality) if available; fallback to provided URL
+        const directUrl =
+            // If `url` points to a page (contains 'ibb.co'), try `display_url` or `image.url`
+            (typeof data?.data?.url === "string" && data.data.url.includes("ibb.co")
+                ? data?.data?.display_url ?? data?.data?.image?.url
+                : data?.data?.url) ||
+            // Fallback to any image URL present
+            data?.data?.image?.url ||
+            "";
+        if (!directUrl) throw new Error("ImgBB response missing image URL");
+        return directUrl;
     };
 
     const handleQualityImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, qualityId: string) => {
